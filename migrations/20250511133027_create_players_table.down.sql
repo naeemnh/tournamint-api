@@ -1,2 +1,2 @@
 -- Add down migration script here
-DROP TABLE IS EXISTS players;
+DROP TABLE IF EXISTS players;

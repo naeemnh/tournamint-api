@@ -8,7 +8,7 @@ use crate::{
 pub async fn find_all(pool: &DbPool) -> Result<Vec<User>, sqlx::Error> {
     let mut tx = pool.begin().await?;
 
-    let user = sqlx::query_as!(
+    let users = sqlx::query_as!(
         User,
         r#"SELECT id, username, email, created_at
             FROM users"#,
@@ -17,7 +17,7 @@ pub async fn find_all(pool: &DbPool) -> Result<Vec<User>, sqlx::Error> {
     .await?;
 
     tx.commit().await?;
-    Ok(user)
+    Ok(users)
 }
 
 pub async fn create(pool: &DbPool, new_user: CreateUser) -> Result<User, sqlx::Error> {
@@ -87,7 +87,7 @@ pub async fn delete(pool: &DbPool, user_id: Uuid) -> Result<Option<User>, sqlx::
     let result = sqlx::query_as!(
         User,
         r#"DELETE FROM users
-        WHERE id = $1 RETURNING id, username, email, created_at"#,
+            WHERE id = $1 RETURNING id, username, email, created_at"#,
         user_id,
     )
     .fetch_optional(&mut *tx)

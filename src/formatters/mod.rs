@@ -3,13 +3,13 @@ use oauth2::http::StatusCode;
 use serde::Serialize;
 
 #[derive(Serialize)]
-pub struct SuccessResponse<T: Serialize> {
+struct SuccessResponse<T: Serialize> {
     result: T,
     meta: String,
 }
 
 #[derive(Serialize)]
-pub struct ErrorResponse<T: Serialize> {
+struct ErrorResponse<T: Serialize> {
     error: T,
     meta: String,
 }
