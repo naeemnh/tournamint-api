@@ -39,6 +39,23 @@ pub async fn create(pool: &DbPool, new_team: NewTeam) -> Result<Option<Team>, sq
     Ok(team)
 }
 
+pub async fn find_by_id(pool: &DbPool, team_id: Uuid) -> Result<Option<Team>, sqlx::Error> {
+    let mut tx = pool.begin().await?;
+
+    let (sql, values) = Query::select()
+        .columns([TeamIden::Id, TeamIden::Name, TeamIden::CreatedAt])
+        .from(TeamIden::Table)
+        .and_where(Expr::col(TeamIden::Id).eq(team_id))
+        .build_sqlx(PostgresQueryBuilder);
+
+    let team = sqlx::query_as_with(&sql, values)
+        .fetch_optional(&mut *tx)
+        .await?;
+
+    tx.commit().await?;
+    Ok(team)
+}
+
 pub async fn update(
     pool: &DbPool,
     team_id: Uuid,
