@@ -35,7 +35,6 @@ pub async fn create(
     let (sql, values) = Query::insert()
         .into_table(PlayerIden::Table)
         .columns([PlayerIden::Name, PlayerIden::UserId])
-        .returning_all()
         .values_panic([new_player.name.into(), new_player.user_id.into()])
         .returning_all()
         .build_sqlx(PostgresQueryBuilder);
