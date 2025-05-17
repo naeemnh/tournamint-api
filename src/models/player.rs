@@ -1,4 +1,7 @@
+use std::fmt::Write;
+
 use chrono::{DateTime, Utc};
+use sea_query::Iden;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -21,4 +24,29 @@ pub struct CreatePlayer {
 pub struct EditablePlayer {
     pub name: String,
     pub user_id: Option<Uuid>,
+}
+
+pub enum PlayerIden {
+    Table,
+    Id,
+    Name,
+    UserId,
+    CreatedAt,
+}
+
+impl Iden for PlayerIden {
+    fn unquoted(&self, s: &mut dyn Write) {
+        write!(
+            s,
+            "{}",
+            match self {
+                PlayerIden::Table => "players",
+                PlayerIden::Id => "id",
+                PlayerIden::Name => "name",
+                PlayerIden::UserId => "user_id",
+                PlayerIden::CreatedAt => "created_at",
+            }
+        )
+        .unwrap()
+    }
 }

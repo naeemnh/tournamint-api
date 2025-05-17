@@ -1,4 +1,7 @@
+use std::fmt::Write;
+
 use chrono::{DateTime, Utc};
+use sea_query::Iden;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
@@ -21,4 +24,29 @@ pub struct CreateUser {
 pub struct EditableUser {
     pub username: String,
     pub email: String,
+}
+
+pub enum UserIden {
+    Table,
+    Id,
+    Username,
+    Email,
+    CreatedAt,
+}
+
+impl Iden for UserIden {
+    fn unquoted(&self, s: &mut dyn Write) {
+        write!(
+            s,
+            "{}",
+            match self {
+                UserIden::Table => "users",
+                UserIden::Id => "id",
+                UserIden::Username => "username",
+                UserIden::Email => "email",
+                UserIden::CreatedAt => "created_at",
+            }
+        )
+        .unwrap()
+    }
 }
