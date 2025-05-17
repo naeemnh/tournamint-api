@@ -7,10 +7,15 @@ use crate::{
     formatters,
     models::team::{EditableTeam, NewTeam},
     repositories::team_repository,
+    utils::db::with_transaction,
 };
 
 pub async fn get_all_teams(pool: &DbPool) -> HttpResponse {
-    match team_repository::find_all(pool).await {
+    match with_transaction(pool, |tx| {
+        Box::pin(async move { team_repository::find_all(tx).await })
+    })
+    .await
+    {
         Ok(teams) => formatters::success_response(StatusCode::OK, teams, "RETURNED_PLAYERS"),
         Err(e) => {
             let error = e.to_string();
@@ -27,7 +32,11 @@ pub async fn get_all_teams(pool: &DbPool) -> HttpResponse {
 }
 
 pub async fn create_team(pool: &DbPool, team_data: NewTeam) -> HttpResponse {
-    match team_repository::create(pool, team_data).await {
+    match with_transaction(pool, |tx| {
+        Box::pin(async move { team_repository::create(tx, team_data).await })
+    })
+    .await
+    {
         Ok(team) => formatters::success_response(StatusCode::CREATED, team, "PLAYER_CREATED"),
         Err(e) => {
             let error = e.to_string();
@@ -44,7 +53,11 @@ pub async fn create_team(pool: &DbPool, team_data: NewTeam) -> HttpResponse {
 }
 
 pub async fn get_team(pool: &DbPool, id: Uuid) -> HttpResponse {
-    match team_repository::find_by_id(pool, id).await {
+    match with_transaction(pool, |tx| {
+        Box::pin(async move { team_repository::find_by_id(tx, id).await })
+    })
+    .await
+    {
         Ok(Some(team)) => formatters::success_response(StatusCode::OK, team, "PLAYER_FOUND"),
         Ok(None) => formatters::error_response(
             StatusCode::NOT_FOUND,
@@ -66,7 +79,11 @@ pub async fn get_team(pool: &DbPool, id: Uuid) -> HttpResponse {
 }
 
 pub async fn update_team(pool: &DbPool, id: Uuid, team_data: EditableTeam) -> HttpResponse {
-    match team_repository::update(pool, id, team_data).await {
+    match with_transaction(pool, |tx| {
+        Box::pin(async move { team_repository::update(tx, id, team_data).await })
+    })
+    .await
+    {
         Ok(Some(team)) => formatters::success_response(StatusCode::OK, team, "PLAYER_UPDATED"),
         Ok(None) => formatters::error_response(
             StatusCode::BAD_REQUEST,
@@ -88,7 +105,11 @@ pub async fn update_team(pool: &DbPool, id: Uuid, team_data: EditableTeam) -> Ht
 }
 
 pub async fn delete_team(pool: &DbPool, id: Uuid) -> HttpResponse {
-    match team_repository::delete(pool, id).await {
+    match with_transaction(pool, |tx| {
+        Box::pin(async move { team_repository::delete(tx, id).await })
+    })
+    .await
+    {
         Ok(Some(team)) => formatters::success_response(StatusCode::OK, team, "PLAYER_DELETED"),
         Ok(None) => formatters::error_response(
             StatusCode::BAD_REQUEST,

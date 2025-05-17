@@ -1,15 +1,11 @@
 use sea_query::{Expr, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
+use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::{
-    config::DbPool,
-    models::player::{CreatePlayer, EditablePlayer, Player, PlayerIden},
-};
+use crate::models::player::{CreatePlayer, EditablePlayer, Player, PlayerIden};
 
-pub async fn find_all(pool: &DbPool) -> Result<Vec<Player>, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-
+pub async fn find_all(tx: &mut PgConnection) -> Result<Vec<Player>, sqlx::Error> {
     let (sql, _) = Query::select()
         .columns([
             PlayerIden::Id,
@@ -20,18 +16,13 @@ pub async fn find_all(pool: &DbPool) -> Result<Vec<Player>, sqlx::Error> {
         .from(PlayerIden::Table)
         .build_sqlx(PostgresQueryBuilder);
 
-    let players = sqlx::query_as(&sql).fetch_all(&mut *tx).await?;
-
-    tx.commit().await?;
-    Ok(players)
+    sqlx::query_as(&sql).fetch_all(&mut *tx).await
 }
 
 pub async fn create(
-    pool: &DbPool,
+    tx: &mut PgConnection,
     new_player: CreatePlayer,
-) -> Result<Player, Box<dyn std::error::Error>> {
-    let mut tx = pool.begin().await?;
-
+) -> Result<Player, sqlx::Error> {
     let (sql, values) = Query::insert()
         .into_table(PlayerIden::Table)
         .columns([PlayerIden::Name, PlayerIden::UserId])
@@ -39,17 +30,13 @@ pub async fn create(
         .returning_all()
         .build_sqlx(PostgresQueryBuilder);
 
-    let player = sqlx::query_as_with(&sql, values)
-        .fetch_one(&mut *tx)
-        .await?;
-
-    tx.commit().await?;
-    Ok(player)
+    sqlx::query_as_with(&sql, values).fetch_one(&mut *tx).await
 }
 
-pub async fn find_by_id(pool: &DbPool, player_id: Uuid) -> Result<Option<Player>, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-
+pub async fn find_by_id(
+    tx: &mut PgConnection,
+    player_id: Uuid,
+) -> Result<Option<Player>, sqlx::Error> {
     let (sql, values) = Query::select()
         .columns([
             PlayerIden::Id,
@@ -61,21 +48,16 @@ pub async fn find_by_id(pool: &DbPool, player_id: Uuid) -> Result<Option<Player>
         .and_where(Expr::col(PlayerIden::Id).eq(player_id))
         .build_sqlx(PostgresQueryBuilder);
 
-    let player = sqlx::query_as_with(&sql, values)
+    sqlx::query_as_with(&sql, values)
         .fetch_optional(&mut *tx)
-        .await?;
-
-    tx.commit().await?;
-    Ok(player)
+        .await
 }
 
 pub async fn update(
-    pool: &DbPool,
+    tx: &mut PgConnection,
     player_id: Uuid,
     player_data: EditablePlayer,
 ) -> Result<Option<Player>, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-
     let (sql, values) = Query::update()
         .table(PlayerIden::Table)
         .values([
@@ -86,27 +68,19 @@ pub async fn update(
         .returning_all()
         .build_sqlx(PostgresQueryBuilder);
 
-    let player = sqlx::query_as_with(&sql, values)
+    sqlx::query_as_with(&sql, values)
         .fetch_optional(&mut *tx)
-        .await?;
-
-    tx.commit().await?;
-    Ok(player)
+        .await
 }
 
-pub async fn delete(pool: &DbPool, player_id: Uuid) -> Result<Option<Player>, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-
+pub async fn delete(tx: &mut PgConnection, player_id: Uuid) -> Result<Option<Player>, sqlx::Error> {
     let (sql, values) = Query::delete()
         .from_table(PlayerIden::Table)
         .and_where(Expr::col(PlayerIden::Id).eq(player_id))
         .returning_all()
         .build_sqlx(PostgresQueryBuilder);
 
-    let result = sqlx::query_as_with(&sql, values)
+    sqlx::query_as_with(&sql, values)
         .fetch_optional(&mut *tx)
-        .await?;
-
-    tx.commit().await?;
-    Ok(result)
+        .await
 }

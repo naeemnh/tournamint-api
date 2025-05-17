@@ -7,9 +7,14 @@ use crate::constants::errors::{DUPLICATE_USER_EMAIL, DUPLICATE_USER_USERNAME};
 use crate::formatters;
 use crate::models::user::{CreateUser, EditableUser};
 use crate::repositories::user_repository;
+use crate::utils::db::with_transaction;
 
 pub async fn get_all_users(pool: &DbPool) -> HttpResponse {
-    match user_repository::find_all(pool).await {
+    match with_transaction(pool, |tx| {
+        Box::pin(async move { user_repository::find_all(tx).await })
+    })
+    .await
+    {
         Ok(users) => formatters::success_response(StatusCode::OK, users, "RETURNED_USERS"),
         Err(e) => {
             let error = e.to_string();
@@ -26,7 +31,11 @@ pub async fn get_all_users(pool: &DbPool) -> HttpResponse {
 }
 
 pub async fn create_user(pool: &DbPool, user_data: CreateUser) -> HttpResponse {
-    match user_repository::create(pool, user_data).await {
+    match with_transaction(pool, |tx| {
+        Box::pin(async move { user_repository::create(tx, user_data).await })
+    })
+    .await
+    {
         Ok(user) => formatters::success_response(StatusCode::CREATED, user, "USER_CREATED"),
         Err(e) => {
             let error = e.to_string();
@@ -45,7 +54,11 @@ pub async fn create_user(pool: &DbPool, user_data: CreateUser) -> HttpResponse {
 }
 
 pub async fn get_user(pool: &DbPool, id: Uuid) -> HttpResponse {
-    match user_repository::find_by_id(pool, id).await {
+    match with_transaction(pool, |tx| {
+        Box::pin(async move { user_repository::find_by_id(tx, id).await })
+    })
+    .await
+    {
         Ok(Some(user)) => formatters::success_response(StatusCode::OK, user, "USER_FOUND"),
         Ok(None) => formatters::error_response(
             StatusCode::NOT_FOUND,
@@ -67,7 +80,11 @@ pub async fn get_user(pool: &DbPool, id: Uuid) -> HttpResponse {
 }
 
 pub async fn update_user(pool: &DbPool, id: Uuid, user_data: EditableUser) -> HttpResponse {
-    match user_repository::update(pool, id, user_data).await {
+    match with_transaction(pool, |tx| {
+        Box::pin(async move { user_repository::update(tx, id, user_data).await })
+    })
+    .await
+    {
         Ok(Some(user)) => formatters::success_response(StatusCode::OK, user, "USER_UPDATED"),
         Ok(None) => formatters::error_response(
             StatusCode::BAD_REQUEST,
@@ -89,7 +106,11 @@ pub async fn update_user(pool: &DbPool, id: Uuid, user_data: EditableUser) -> Ht
 }
 
 pub async fn delete_user(pool: &DbPool, id: Uuid) -> HttpResponse {
-    match user_repository::delete(pool, id).await {
+    match with_transaction(pool, |tx| {
+        Box::pin(async move { user_repository::delete(tx, id).await })
+    })
+    .await
+    {
         Ok(Some(user)) => formatters::success_response(StatusCode::OK, user, "USER_DELETED"),
         Ok(None) => formatters::error_response(
             StatusCode::BAD_REQUEST,

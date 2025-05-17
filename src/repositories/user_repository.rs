@@ -1,15 +1,11 @@
 use sea_query::{Expr, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
+use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::{
-    config::DbPool,
-    models::user::{CreateUser, EditableUser, User, UserIden},
-};
+use crate::models::user::{CreateUser, EditableUser, User, UserIden};
 
-pub async fn find_all(pool: &DbPool) -> Result<Vec<User>, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-
+pub async fn find_all(tx: &mut PgConnection) -> Result<Vec<User>, sqlx::Error> {
     let (sql, _) = Query::select()
         .columns([
             UserIden::Id,
@@ -20,16 +16,10 @@ pub async fn find_all(pool: &DbPool) -> Result<Vec<User>, sqlx::Error> {
         .from(UserIden::Table)
         .build_sqlx(PostgresQueryBuilder);
 
-    let users = sqlx::query_as(&sql).fetch_all(&mut *tx).await?;
-
-    tx.commit().await?;
-    Ok(users)
+    sqlx::query_as(&sql).fetch_all(tx).await
 }
 
-pub async fn create(pool: &DbPool, new_user: CreateUser) -> Result<User, sqlx::Error> {
-    // Use a transaction to prevent prepared statement issues
-    let mut tx = pool.begin().await?;
-
+pub async fn create(tx: &mut PgConnection, new_user: CreateUser) -> Result<User, sqlx::Error> {
     let (sql, values) = Query::insert()
         .into_table(UserIden::Table)
         .columns([UserIden::Username, UserIden::Email])
@@ -38,18 +28,10 @@ pub async fn create(pool: &DbPool, new_user: CreateUser) -> Result<User, sqlx::E
         .returning_all()
         .build_sqlx(PostgresQueryBuilder);
 
-    let user = sqlx::query_as_with(&sql, values)
-        .fetch_one(&mut *tx)
-        .await?;
-
-    tx.commit().await?;
-    Ok(user)
+    sqlx::query_as_with(&sql, values).fetch_one(&mut *tx).await
 }
 
-pub async fn find_by_id(pool: &DbPool, user_id: Uuid) -> Result<Option<User>, sqlx::Error> {
-    // Use explicit type annotations for PostgreSQL
-    let mut tx = pool.begin().await?;
-
+pub async fn find_by_id(tx: &mut PgConnection, user_id: Uuid) -> Result<Option<User>, sqlx::Error> {
     let (sql, values) = Query::select()
         .columns([
             UserIden::Id,
@@ -61,21 +43,16 @@ pub async fn find_by_id(pool: &DbPool, user_id: Uuid) -> Result<Option<User>, sq
         .and_where(Expr::col(UserIden::Id).eq(user_id))
         .build_sqlx(PostgresQueryBuilder);
 
-    let user = sqlx::query_as_with(&sql, values)
+    sqlx::query_as_with(&sql, values)
         .fetch_optional(&mut *tx)
-        .await?;
-
-    tx.commit().await?;
-    Ok(user)
+        .await
 }
 
 pub async fn update(
-    pool: &DbPool,
+    tx: &mut PgConnection,
     user_id: Uuid,
     user_data: EditableUser,
 ) -> Result<Option<User>, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-
     let (sql, values) = Query::update()
         .table(UserIden::Table)
         .values([
@@ -86,27 +63,19 @@ pub async fn update(
         .returning_all()
         .build_sqlx(PostgresQueryBuilder);
 
-    let user = sqlx::query_as_with(&sql, values)
+    sqlx::query_as_with(&sql, values)
         .fetch_optional(&mut *tx)
-        .await?;
-
-    tx.commit().await?;
-    Ok(user)
+        .await
 }
 
-pub async fn delete(pool: &DbPool, user_id: Uuid) -> Result<Option<User>, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-
+pub async fn delete(tx: &mut PgConnection, user_id: Uuid) -> Result<Option<User>, sqlx::Error> {
     let (sql, values) = Query::delete()
         .from_table(UserIden::Table)
         .and_where(Expr::col(UserIden::Id).eq(user_id))
         .returning_all()
         .build_sqlx(PostgresQueryBuilder);
 
-    let result = sqlx::query_as_with(&sql, values)
+    sqlx::query_as_with(&sql, values)
         .fetch_optional(&mut *tx)
-        .await?;
-
-    tx.commit().await?;
-    Ok(result)
+        .await
 }
