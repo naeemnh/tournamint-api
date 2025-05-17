@@ -9,7 +9,7 @@ use uuid::Uuid;
 pub struct Team {
     pub id: Uuid,
     pub name: String,
-    #[serde(with = "chrono::serfe::ts_milliseconds")]
+    #[serde(with = "chrono::serde::ts_milliseconds")]
     pub created_at: DateTime<Utc>,
 }
 
