@@ -5,12 +5,21 @@ use sea_query::Iden;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::team_member::TeamPlayer;
+
 #[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
 pub struct Team {
     pub id: Uuid,
     pub name: String,
     #[serde(with = "chrono::serde::ts_milliseconds")]
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+pub struct TeamWithMembers {
+    #[serde(flatten)]
+    pub team: Team,
+    pub members: Vec<TeamPlayer>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,7 +45,7 @@ impl Iden for TeamIden {
             s,
             "{}",
             match self {
-                TeamIden::Table => "team",
+                TeamIden::Table => "teams",
                 TeamIden::Id => "id",
                 TeamIden::Name => "name",
                 TeamIden::CreatedAt => "created_at",

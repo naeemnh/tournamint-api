@@ -3,7 +3,11 @@ use sea_query_binder::SqlxBinder;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::models::team::{EditableTeam, NewTeam, Team, TeamIden};
+use crate::models::{
+    player::PlayerIden,
+    team::{EditableTeam, NewTeam, Team, TeamIden, TeamWithMembers},
+    team_member::{TeamMemberIden, TeamPlayer},
+};
 
 pub async fn find_all(tx: &mut PgConnection) -> Result<Vec<Team>, sqlx::Error> {
     let (sql, _) = Query::select()
@@ -27,16 +31,46 @@ pub async fn create(tx: &mut PgConnection, new_team: NewTeam) -> Result<Option<T
         .await
 }
 
-pub async fn find_by_id(tx: &mut PgConnection, team_id: Uuid) -> Result<Option<Team>, sqlx::Error> {
+pub async fn find_by_id(
+    tx: &mut PgConnection,
+    team_id: Uuid,
+) -> Result<Option<TeamWithMembers>, sqlx::Error> {
     let (sql, values) = Query::select()
         .columns([TeamIden::Id, TeamIden::Name, TeamIden::CreatedAt])
         .from(TeamIden::Table)
         .and_where(Expr::col(TeamIden::Id).eq(team_id))
         .build_sqlx(PostgresQueryBuilder);
 
-    sqlx::query_as_with(&sql, values)
+    let team = sqlx::query_as_with(&sql, values)
         .fetch_optional(&mut *tx)
-        .await
+        .await?;
+
+    let (members_sql, members_values) = Query::select()
+        .columns([
+            (PlayerIden::Table, PlayerIden::Id),
+            (PlayerIden::Table, PlayerIden::Name),
+            (PlayerIden::Table, PlayerIden::UserId),
+        ])
+        .columns([
+            (TeamMemberIden::Table, TeamMemberIden::IsCaptain),
+            (TeamMemberIden::Table, TeamMemberIden::JerseyNumber),
+            (TeamMemberIden::Table, TeamMemberIden::JoinedAt),
+        ])
+        .from(TeamMemberIden::Table)
+        .inner_join(
+            PlayerIden::Table,
+            Expr::col((TeamMemberIden::Table, TeamMemberIden::PlayerId))
+                .equals((PlayerIden::Table, PlayerIden::Id)),
+        )
+        .and_where(Expr::col(TeamMemberIden::TeamId).eq(team_id))
+        .build_sqlx(PostgresQueryBuilder);
+
+    let members: Vec<TeamPlayer> = sqlx::query_as_with(&members_sql, members_values)
+        .fetch_all(&mut *tx)
+        .await?
+        .into();
+
+    Ok(team.map(|team| TeamWithMembers { team, members }))
 }
 
 pub async fn update(

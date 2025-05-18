@@ -8,7 +8,14 @@ where
     ) -> Pin<Box<dyn Future<Output = Result<R, Error>> + 't>>,
 {
     let mut tx = pool.begin().await?;
-    let result = f(&mut tx).await;
-    tx.commit().await?;
-    result
+    match f(&mut tx).await {
+        Ok(result) => {
+            tx.commit().await?;
+            Ok(result)
+        }
+        Err(e) => {
+            tx.rollback().await?;
+            Err(e)
+        }
+    }
 }

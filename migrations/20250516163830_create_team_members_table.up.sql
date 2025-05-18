@@ -1,5 +1,5 @@
 -- Add up migration script here
-CREATE IF NOT EXISTS team_members (
+CREATE TABLE IF NOT EXISTS team_members (
     team_id UUID REFERENCES teams (id) ON DELETE CASCADE,
     player_id UUID REFERENCES players (id) ON DELETE CASCADE,
     is_captain BOOLEAN DEFAULT FALSE,

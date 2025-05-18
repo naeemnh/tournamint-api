@@ -1,8 +1,7 @@
-use std::fmt::Write;
-
 use chrono::{DateTime, Utc};
 use sea_query::Iden;
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 use uuid::Uuid;
 
 #[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
@@ -10,7 +9,7 @@ pub struct TeamMember {
     pub team_id: Uuid,
     pub player_id: Uuid,
     pub is_captain: bool,
-    pub jersey_number: Option<i8>,
+    pub jersey_number: Option<i32>,
     pub joined_at: DateTime<Utc>,
 }
 
@@ -19,13 +18,23 @@ pub struct NewTeamMember {
     pub team_id: Uuid,
     pub player_id: Uuid,
     pub is_captain: Option<bool>,
-    pub jersey_number: Option<i8>,
+    pub jersey_number: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EditableTeamMember {
     pub is_captain: bool,
-    pub jersey_number: Option<i8>,
+    pub jersey_number: Option<i32>,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+pub struct TeamPlayer {
+    pub id: Uuid,
+    pub name: String,
+    pub user_id: Option<Uuid>,
+    pub is_captain: bool,
+    pub jersey_number: Option<i32>,
+    pub joined_at: DateTime<Utc>,
 }
 
 pub enum TeamMemberIden {
