@@ -2,18 +2,18 @@ use sea_query::{error::Error as SeaQueryError, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
 use sqlx::{Error as SqlxError, PgConnection};
 
-use crate::models::token::{Token, TokenIden};
+use crate::models::token::{UserToken, UserTokenIden};
 
 pub async fn upsert_refresh_token(
     tx: &mut PgConnection,
-    token_data: Token,
+    token_data: UserToken,
 ) -> Result<(), sqlx::Error> {
     let (sql, values) = Query::insert()
-        .into_table(TokenIden::Table)
+        .into_table(UserTokenIden::Table)
         .columns([
-            TokenIden::UserId,
-            TokenIden::RefreshToken,
-            TokenIden::ExpiresAt,
+            UserTokenIden::UserId,
+            UserTokenIden::RefreshToken,
+            UserTokenIden::ExpiresAt,
         ])
         .values([
             token_data.user_id.into(),
@@ -22,8 +22,8 @@ pub async fn upsert_refresh_token(
         ])
         .map_err(|e: SeaQueryError| SqlxError::Configuration(Box::new(e)))?
         .on_conflict(
-            sea_query::OnConflict::column(TokenIden::UserId)
-                .update_columns([TokenIden::RefreshToken, TokenIden::ExpiresAt])
+            sea_query::OnConflict::column(UserTokenIden::UserId)
+                .update_columns([UserTokenIden::RefreshToken, UserTokenIden::ExpiresAt])
                 .to_owned(),
         )
         .build_sqlx(PostgresQueryBuilder);

@@ -30,6 +30,13 @@ pub struct EditableUser {
     pub email: String,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct GoogleUserInfo {
+    pub sub: String,
+    pub email: String,
+    pub name: Option<String>,
+}
+
 pub enum UserIden {
     Table,
     GoogleId,

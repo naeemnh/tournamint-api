@@ -5,7 +5,7 @@ use oauth2::{http::StatusCode, TokenResponse};
 use crate::{
     config::DbPool,
     formatters,
-    models::{token::Token, user::NewUser},
+    models::{auth::LoginResponse, token::UserToken, user::NewUser},
     repositories::{token_repository, user_repository},
     utils::{db::with_transaction, google, jwt::generate_jwt},
 };
@@ -63,6 +63,7 @@ pub async fn handle_google_login(pool: &DbPool, code: &str) -> HttpResponse {
     };
 
     let new_user = NewUser {
+        google_id: user_info["id"].to_string(),
         email: user_info["email"].to_string(),
         name: Some(user_info["name"].to_string()),
     };
@@ -70,7 +71,8 @@ pub async fn handle_google_login(pool: &DbPool, code: &str) -> HttpResponse {
     // Find or create user
     match with_transaction(pool, |tx| {
         Box::pin(async move {
-            let user = if let Some(user) = user_repository::find_by_google_id(tx, google_id).await?
+            let user = if let Some(user) =
+                user_repository::find_by_google_id(tx, &new_user.google_id).await?
             {
                 user
             } else {
@@ -80,7 +82,7 @@ pub async fn handle_google_login(pool: &DbPool, code: &str) -> HttpResponse {
             if let Some(refresh_token) = refresh_token {
                 token_repository::upsert_refresh_token(
                     tx,
-                    Token {
+                    UserToken {
                         user_id: user.id,
                         refresh_token,
                         expires_at: Utc::now() + chrono::Duration::seconds(expires_in),
@@ -92,7 +94,7 @@ pub async fn handle_google_login(pool: &DbPool, code: &str) -> HttpResponse {
             let jwt = generate_jwt(&user)
                 .map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
 
-            Ok((user, jwt))
+            Ok(LoginResponse { user, jwt })
         })
     })
     .await

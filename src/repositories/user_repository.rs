@@ -59,7 +59,7 @@ pub async fn find_by_id(tx: &mut PgConnection, user_id: Uuid) -> Result<Option<U
 
 pub async fn find_by_google_id(
     tx: &mut PgConnection,
-    google_id: String,
+    google_id: &String,
 ) -> Result<Option<User>, sqlx::Error> {
     let (sql, values) = Query::select()
         .columns([

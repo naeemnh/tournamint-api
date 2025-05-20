@@ -6,30 +6,30 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
 #[derive(Debug, FromRow, Serialize, Deserialize)]
-pub struct Token {
+pub struct UserToken {
     pub refresh_token: String,
     pub user_id: uuid::Uuid,
     #[serde(with = "chrono::serde::ts_milliseconds")]
     pub expires_at: DateTime<Utc>,
 }
 
-pub enum TokenIden {
+pub enum UserTokenIden {
     Table,
     RefreshToken,
     UserId,
     ExpiresAt,
 }
 
-impl Iden for TokenIden {
+impl Iden for UserTokenIden {
     fn unquoted(&self, s: &mut dyn Write) {
         write!(
             s,
             "{}",
             match self {
-                TokenIden::Table => "user_tokens",
-                TokenIden::RefreshToken => "refresh_token",
-                TokenIden::UserId => "user_id",
-                TokenIden::ExpiresAt => "expires_at",
+                UserTokenIden::Table => "user_tokens",
+                UserTokenIden::RefreshToken => "refresh_token",
+                UserTokenIden::UserId => "user_id",
+                UserTokenIden::ExpiresAt => "expires_at",
             }
         )
         .unwrap()

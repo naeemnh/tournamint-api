@@ -1,15 +1,8 @@
-use crate::models::user::User;
+use crate::models::{auth::Claims, user::User};
 
 pub fn generate_jwt(user: &User) -> Result<String, jsonwebtoken::errors::Error> {
     use chrono::Utc;
     use jsonwebtoken::{encode, EncodingKey, Header};
-
-    #[derive(serde::Serialize)]
-    struct Claims {
-        sub: String,
-        exp: usize,
-        email: String,
-    }
 
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
     let expiration = Utc::now()

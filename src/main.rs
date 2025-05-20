@@ -5,6 +5,7 @@ mod config;
 mod constants;
 mod controllers;
 mod formatters;
+mod middlewares;
 mod models;
 mod repositories;
 mod routes;
@@ -21,6 +22,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(middlewares::auth::AuthMiddleware)
             .app_data(web::Data::new(pool.clone()))
             .configure(routes::api_routes)
     })
