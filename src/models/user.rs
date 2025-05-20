@@ -7,31 +7,37 @@ use sqlx::FromRow;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct User {
-    pub id: sqlx::types::Uuid, // Matches PostgreSQL uuid type
-    pub username: String,      // VARCHAR/TEXT
-    pub email: String,         // VARCHAR/TEXT
+    pub id: uuid::Uuid,
+    pub google_id: String,
+    pub email: String,
+    pub name: Option<String>,
     #[serde(with = "chrono::serde::ts_milliseconds")]
-    pub created_at: DateTime<Utc>, // TIMESTAMPTZ
+    pub created_at: DateTime<Utc>,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateUser {
-    pub username: Option<String>,
+    pub name: Option<String>,
     pub email: String,
+    pub google_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EditableUser {
-    pub username: String,
+    pub name: String,
     pub email: String,
 }
 
 pub enum UserIden {
     Table,
+    GoogleId,
     Id,
-    Username,
+    Name,
     Email,
     CreatedAt,
+    UpdatedAt,
 }
 
 impl Iden for UserIden {
@@ -42,9 +48,11 @@ impl Iden for UserIden {
             match self {
                 UserIden::Table => "users",
                 UserIden::Id => "id",
-                UserIden::Username => "username",
+                UserIden::GoogleId => "google_id",
+                UserIden::Name => "name",
                 UserIden::Email => "email",
                 UserIden::CreatedAt => "created_at",
+                UserIden::UpdatedAt => "updated_at",
             }
         )
         .unwrap()
