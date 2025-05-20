@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::config::DbPool;
 use crate::constants::errors::{DUPLICATE_USER_EMAIL, DUPLICATE_USER_USERNAME};
 use crate::formatters;
-use crate::models::user::{CreateUser, EditableUser};
+use crate::models::user::{EditableUser, NewUser};
 use crate::repositories::user_repository;
 use crate::utils::db::with_transaction;
 
@@ -30,7 +30,7 @@ pub async fn get_all_users(pool: &DbPool) -> HttpResponse {
     }
 }
 
-pub async fn create_user(pool: &DbPool, user_data: CreateUser) -> HttpResponse {
+pub async fn create_user(pool: &DbPool, user_data: NewUser) -> HttpResponse {
     match with_transaction(pool, |tx| {
         Box::pin(async move { user_repository::create(tx, user_data).await })
     })

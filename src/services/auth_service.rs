@@ -5,7 +5,7 @@ use oauth2::{http::StatusCode, TokenResponse};
 use crate::{
     config::DbPool,
     formatters,
-    models::{token::Token, user::CreateUser},
+    models::{token::Token, user::NewUser},
     repositories::{token_repository, user_repository},
     utils::{db::with_transaction, google, jwt::generate_jwt},
 };
@@ -62,10 +62,7 @@ pub async fn handle_google_login(pool: &DbPool, code: &str) -> HttpResponse {
         }
     };
 
-    let google_id = user_info["sub"].to_string();
-
-    let new_user = CreateUser {
-        google_id: user_info["sub"].to_string(),
+    let new_user = NewUser {
         email: user_info["email"].to_string(),
         name: Some(user_info["name"].to_string()),
     };

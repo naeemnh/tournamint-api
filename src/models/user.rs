@@ -18,7 +18,7 @@ pub struct User {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateUser {
+pub struct NewUser {
     pub name: Option<String>,
     pub email: String,
     pub google_id: String,

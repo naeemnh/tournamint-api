@@ -4,7 +4,7 @@ use sea_query_binder::SqlxBinder;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::models::user::{CreateUser, EditableUser, User, UserIden};
+use crate::models::user::{EditableUser, NewUser, User, UserIden};
 
 pub async fn find_all(tx: &mut PgConnection) -> Result<Vec<User>, sqlx::Error> {
     let (sql, _) = Query::select()
@@ -22,7 +22,7 @@ pub async fn find_all(tx: &mut PgConnection) -> Result<Vec<User>, sqlx::Error> {
     sqlx::query_as(&sql).fetch_all(tx).await
 }
 
-pub async fn create(tx: &mut PgConnection, new_user: CreateUser) -> Result<User, sqlx::Error> {
+pub async fn create(tx: &mut PgConnection, new_user: NewUser) -> Result<User, sqlx::Error> {
     let (sql, values) = Query::insert()
         .into_table(UserIden::Table)
         .columns([UserIden::GoogleId, UserIden::Name, UserIden::Email])
