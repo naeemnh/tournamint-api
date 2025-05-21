@@ -63,9 +63,9 @@ pub async fn handle_google_login(pool: &DbPool, code: &str) -> HttpResponse {
     };
 
     let new_user = NewUser {
-        google_id: user_info["id"].to_string(),
-        email: user_info["email"].to_string(),
-        name: Some(user_info["name"].to_string()),
+        google_id: user_info["id"].as_str().unwrap().to_string(),
+        email: user_info["email"].as_str().unwrap().to_string(),
+        name: Some(user_info["name"].as_str().unwrap().to_string()),
     };
 
     // Find or create user
