@@ -7,19 +7,22 @@ use uuid::Uuid;
 
 use super::team_member::TeamPlayer;
 
-#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize, Clone)]
 pub struct Team {
     pub id: Uuid,
     pub name: String,
+    max_players: i32,
     #[serde(with = "chrono::serde::ts_milliseconds")]
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize, Clone)]
 pub struct TeamWithMembers {
-    #[serde(flatten)]
-    pub team: Team,
-    pub members: Vec<TeamPlayer>,
+    pub id: Uuid,
+    pub name: String,
+    pub players: Vec<TeamPlayer>,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

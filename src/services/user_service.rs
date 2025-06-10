@@ -2,10 +2,10 @@ use actix_web::HttpResponse;
 use oauth2::http::StatusCode;
 use uuid::Uuid;
 
-use crate::config::DbPool;
 use crate::constants::errors::{DUPLICATE_USER_EMAIL, DUPLICATE_USER_USERNAME};
 use crate::formatters;
 use crate::models::user::{EditableUser, NewUser};
+use crate::providers::DbPool;
 use crate::repositories::user_repository;
 use crate::utils::db::with_transaction;
 

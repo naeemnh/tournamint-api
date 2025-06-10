@@ -1,8 +1,8 @@
 use actix_web::{web, Responder};
 use uuid::Uuid;
 
-use crate::config::db::DbPool;
 use crate::models::user::{EditableUser, NewUser};
+use crate::providers::DbPool;
 use crate::services::user_service;
 
 pub async fn index(pool: web::Data<DbPool>) -> impl Responder {

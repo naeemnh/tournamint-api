@@ -1,6 +1,5 @@
-use crate::{services::auth_service, utils::google};
+use crate::services::auth_service;
 use actix_web::{web, HttpResponse, Responder};
-use oauth2::{CsrfToken, Scope};
 use sqlx::PgPool;
 
 #[derive(serde::Deserialize)]
@@ -9,14 +8,11 @@ pub struct GoogleCallbackQuery {
 }
 
 pub async fn start_google_login() -> impl Responder {
-    let client = google::get_google_oauth_client();
-
-    // Generate the authorization URL
-    let (auth_url, _csrf_token) = client
-        .authorize_url(CsrfToken::new_random)
-        .add_scope(Scope::new("email".to_string()))
-        .add_scope(Scope::new("profile".to_string()))
-        .url();
+    let auth_url = auth_service::google_login(
+        std::env::var("APP_ENV")
+            .expect("Application environment (APP_ENV) type is not defined.")
+            .as_str(),
+    );
 
     // Redirect to Google's authorization page
     HttpResponse::Found()
@@ -28,5 +24,5 @@ pub async fn google_callback(
     pool: web::Data<PgPool>,
     code: web::Query<GoogleCallbackQuery>,
 ) -> impl Responder {
-    auth_service::handle_google_login(&pool, &code.code).await
+    auth_service::google_callback(&pool, &code.code).await
 }

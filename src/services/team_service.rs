@@ -3,9 +3,9 @@ use oauth2::http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
-    config::DbPool,
     formatters,
     models::team::{EditableTeam, NewTeam},
+    providers::DbPool,
     repositories::team_repository,
     utils::db::with_transaction,
 };

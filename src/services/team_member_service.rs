@@ -2,7 +2,7 @@ use actix_web::HttpResponse;
 use oauth2::http::StatusCode;
 
 use crate::{
-    config::DbPool, formatters, models::team_member::NewTeamMember,
+    formatters, models::team_member::NewTeamMember, providers::DbPool,
     repositories::team_member_repository, utils::db::with_transaction,
 };
 

@@ -2,8 +2,8 @@ use actix_web::{web, Responder};
 use uuid::Uuid;
 
 use crate::{
-    config::DbPool,
     models::player::{CreatePlayer, EditablePlayer},
+    providers::DbPool,
     services::player_service,
 };
 

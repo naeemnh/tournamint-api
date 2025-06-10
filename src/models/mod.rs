@@ -1,6 +1,9 @@
 pub(crate) mod auth;
+pub(crate) mod participant;
 pub(crate) mod player;
+pub(crate) mod sport;
 pub(crate) mod team;
 pub(crate) mod team_member;
 pub(crate) mod token;
+pub(crate) mod tournament;
 pub(crate) mod user;

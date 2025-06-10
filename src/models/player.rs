@@ -5,7 +5,7 @@ use sea_query::Iden;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, sqlx::FromRow, sqlx::Type, Serialize, Deserialize)]
+#[derive(Debug, sqlx::FromRow, sqlx::Type, Serialize, Deserialize, Clone)]
 pub struct Player {
     pub id: Uuid,
     pub name: String,

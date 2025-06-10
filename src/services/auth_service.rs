@@ -1,16 +1,38 @@
 use actix_web::HttpResponse;
 use chrono::Utc;
-use oauth2::{http::StatusCode, TokenResponse};
+use oauth2::{http::StatusCode, CsrfToken, Scope, TokenResponse};
 
 use crate::{
-    config::DbPool,
     formatters,
     models::{auth::LoginResponse, token::UserToken, user::NewUser},
+    providers::DbPool,
     repositories::{token_repository, user_repository},
     utils::{db::with_transaction, google, jwt::generate_jwt},
 };
 
-pub async fn handle_google_login(pool: &DbPool, code: &str) -> HttpResponse {
+pub fn google_login(app_env: &str) -> reqwest::Url {
+    let client = google::get_google_oauth_client();
+
+    // Generate the authorization URL
+    let (auth_url, _) = match app_env {
+        "production" => client
+            .authorize_url(CsrfToken::new_random)
+            .add_scope(Scope::new("email".to_string()))
+            .add_scope(Scope::new("profile".to_string()))
+            .url(),
+        _ => client
+            .authorize_url(CsrfToken::new_random)
+            .add_extra_param("access_type", "offline")
+            .add_extra_param("prompt", "consent")
+            .add_scope(Scope::new("email".to_string()))
+            .add_scope(Scope::new("profile".to_string()))
+            .url(),
+    };
+
+    auth_url
+}
+
+pub async fn google_callback(pool: &DbPool, code: &str) -> HttpResponse {
     let client = google::get_google_oauth_client();
 
     // Exchange code for token

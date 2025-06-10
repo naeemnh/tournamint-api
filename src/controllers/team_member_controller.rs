@@ -1,6 +1,6 @@
 use actix_web::{web, Responder};
 
-use crate::{config::DbPool, models::team_member::NewTeamMember, services::team_member_service};
+use crate::{models::team_member::NewTeamMember, providers::DbPool, services::team_member_service};
 
 pub async fn post(
     pool: web::Data<DbPool>,

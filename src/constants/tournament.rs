@@ -1,0 +1,2 @@
+pub const SINGLE_CATEGORY_TOURNAMENT: &str = "SINGLE";
+pub const MULTI_CATEGORY_TOURNAMENT: &str = "MULTI";

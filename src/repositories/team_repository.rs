@@ -41,7 +41,7 @@ pub async fn find_by_id(
         .and_where(Expr::col(TeamIden::Id).eq(team_id))
         .build_sqlx(PostgresQueryBuilder);
 
-    let team = sqlx::query_as_with(&sql, values)
+    let team: Option<Team> = sqlx::query_as_with(&sql, values)
         .fetch_optional(&mut *tx)
         .await?;
 
@@ -70,7 +70,12 @@ pub async fn find_by_id(
         .await?
         .into();
 
-    Ok(team.map(|team| TeamWithMembers { team, members }))
+    Ok(team.map(|team| TeamWithMembers {
+        id: team.id,
+        name: team.name,
+        created_at: team.created_at,
+        players: members,
+    }))
 }
 
 pub async fn update(

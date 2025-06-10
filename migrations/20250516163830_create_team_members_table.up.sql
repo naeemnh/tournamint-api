@@ -4,5 +4,6 @@ CREATE TABLE IF NOT EXISTS team_members (
     player_id UUID REFERENCES players (id) ON DELETE CASCADE,
     is_captain BOOLEAN DEFAULT FALSE,
     jersey_number INTEGER,
-    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW() ON UPDATE NOW()
 )

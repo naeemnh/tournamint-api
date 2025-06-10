@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use uuid::Uuid;
 
+use super::player::Player;
+
 #[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
 pub struct TeamMember {
     pub team_id: Uuid,
@@ -27,7 +29,7 @@ pub struct EditableTeamMember {
     pub jersey_number: Option<i32>,
 }
 
-#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize, Clone)]
 pub struct TeamPlayer {
     pub id: Uuid,
     pub name: String,
@@ -44,6 +46,11 @@ pub enum TeamMemberIden {
     IsCaptain,
     JerseyNumber,
     JoinedAt,
+}
+
+pub enum PlayerRefs<'a> {
+    Individual(Vec<&'a Player>),
+    TeamPlayers(Vec<&'a TeamPlayer>),
 }
 
 impl Iden for TeamMemberIden {

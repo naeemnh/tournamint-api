@@ -1,5 +1,4 @@
 use actix_web::{web, App, HttpServer};
-use dotenv::dotenv;
 
 mod config;
 mod constants;
@@ -7,18 +6,18 @@ mod controllers;
 mod formatters;
 mod middlewares;
 mod models;
+mod providers;
 mod repositories;
 mod routes;
 mod services;
+mod state;
 mod utils;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
+    let pool = providers::DbProvider::pool().await;
 
-    let pool = config::db::create_db_pool()
-        .await
-        .expect("Failed to create pool");
+    let app_url = config::AppConfig::get_app_url();
 
     HttpServer::new(move || {
         App::new()
@@ -26,7 +25,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .configure(routes::api_routes)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(app_url)?
     .run()
     .await
 }
