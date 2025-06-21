@@ -16,9 +16,14 @@ mod utils;
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
-    let pool = config::db::create_db_pool()
+    let app_config = config::AppConfig::from_env();
+    let bind_address = app_config.bind_address();
+
+    let pool = config::DbConfig::create_db_pool()
         .await
         .expect("Failed to create pool");
+
+    println!("Starting server at http://{}", &bind_address);
 
     HttpServer::new(move || {
         App::new()
@@ -26,7 +31,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .configure(routes::api_routes)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(&bind_address)?
     .run()
     .await
 }
