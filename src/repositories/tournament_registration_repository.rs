@@ -5,9 +5,8 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::models::tournament_registration::{
-    EditableTournamentRegistration, NewTournamentRegistration, PaymentStatus,
-    RegistrationStatus, RegistrationWithDetails, TournamentRegistration,
-    TournamentRegistrationIden,
+    EditableTournamentRegistration, NewTournamentRegistration, PaymentStatus, RegistrationStatus,
+    RegistrationWithDetails, TournamentRegistration, TournamentRegistrationIden,
 };
 
 pub struct TournamentRegistrationRepository;
@@ -193,10 +192,7 @@ impl TournamentRegistrationRepository {
             ORDER BY tr.registration_date DESC
         "#;
 
-        sqlx::query_as(sql)
-            .bind(team_id)
-            .fetch_all(&mut *tx)
-            .await
+        sqlx::query_as(sql).bind(team_id).fetch_all(&mut *tx).await
     }
 
     pub async fn update(
@@ -232,7 +228,10 @@ impl TournamentRegistrationRepository {
         }
 
         if let Some(payment_reference) = data.payment_reference {
-            query.value(TournamentRegistrationIden::PaymentReference, payment_reference);
+            query.value(
+                TournamentRegistrationIden::PaymentReference,
+                payment_reference,
+            );
         }
 
         if let Some(notes) = data.notes {
@@ -253,7 +252,10 @@ impl TournamentRegistrationRepository {
         sqlx::query_as_with(&sql, values).fetch_one(&mut *tx).await
     }
 
-    pub async fn delete(tx: &mut PgConnection, id: Uuid) -> Result<TournamentRegistration, sqlx::Error> {
+    pub async fn delete(
+        tx: &mut PgConnection,
+        id: Uuid,
+    ) -> Result<TournamentRegistration, sqlx::Error> {
         let (sql, values) = Query::delete()
             .from_table(TournamentRegistrationIden::Table)
             .and_where(Expr::col(TournamentRegistrationIden::Id).eq(id))
