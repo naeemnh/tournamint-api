@@ -5,7 +5,7 @@ use sea_query::Iden;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct UserToken {
     pub refresh_token: String,
     pub user_id: uuid::Uuid,
