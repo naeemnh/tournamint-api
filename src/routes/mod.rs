@@ -4,6 +4,9 @@ mod auth;
 mod player;
 mod team;
 mod team_member;
+mod tournament;
+mod tournament_category;
+mod tournament_registration;
 mod user;
 
 pub fn api_routes(app: &mut ServiceConfig) {
@@ -12,4 +15,7 @@ pub fn api_routes(app: &mut ServiceConfig) {
     team::routes(app);
     player::routes(app);
     team_member::routes(app);
+    tournament::routes(app);
+    tournament_category::routes(app);
+    tournament_registration::routes(app);
 }
