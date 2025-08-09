@@ -10,6 +10,9 @@ use std::pin::Pin;
 use std::rc::Rc;
 
 use crate::models::auth::Claims;
+use crate::models::user::User;
+use actix_web::HttpRequest;
+use actix_web::HttpResponse;
 
 pub struct AuthMiddleware;
 
@@ -87,4 +90,42 @@ where
             svc.call(req).await
         })
     }
+}
+
+// Helper function to create auth middleware
+pub fn auth_middleware() -> AuthMiddleware {
+    AuthMiddleware
+}
+
+// Helper function to extract user from token in request
+pub async fn get_user_from_token(req: &HttpRequest) -> Result<User, HttpResponse> {
+    // Extract claims from request extensions (set by middleware)
+    let claims = req.extensions()
+        .get::<Claims>()
+        .cloned()
+        .ok_or_else(|| {
+            HttpResponse::Unauthorized().json(serde_json::json!({
+                "error": "No authentication token found"
+            }))
+        })?;
+
+    // Parse user ID from claims.sub
+    let user_id = uuid::Uuid::parse_str(&claims.sub)
+        .map_err(|_| {
+            HttpResponse::Unauthorized().json(serde_json::json!({
+                "error": "Invalid user ID in token"
+            }))
+        })?;
+
+    // Create a User object from claims
+    let user = User {
+        id: user_id,
+        google_id: String::new(), // Placeholder - you might want to fetch from DB
+        email: claims.email.clone(),
+        name: None, // Placeholder - you might want to fetch from DB
+        created_at: chrono::Utc::now(), // Placeholder
+        updated_at: chrono::Utc::now(), // Placeholder
+    };
+
+    Ok(user)
 }

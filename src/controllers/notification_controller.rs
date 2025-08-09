@@ -1,10 +1,11 @@
-use actix_web::{web, Responder, HttpRequest};
+use actix_web::{web, HttpRequest, Responder};
 use uuid::Uuid;
 
 use crate::config::DbPool;
-use crate::models::notification::SendNotificationRequest;
-use crate::services::notification_service::NotificationService;
 use crate::middlewares::auth::get_user_from_token;
+use crate::models::common::PaginationQuery;
+use crate::models::notification::SendNotificationRequest;
+use crate::services::NotificationService;
 
 pub struct NotificationController;
 
@@ -17,13 +18,8 @@ impl NotificationController {
     ) -> impl Responder {
         match get_user_from_token(&req).await {
             Ok(user) => {
-                NotificationService::get_notifications(
-                    &pool,
-                    user.id,
-                    query.limit,
-                    query.offset,
-                )
-                .await
+                NotificationService::get_notifications(&pool, user.id, query.limit, query.offset)
+                    .await
             }
             Err(response) => response,
         }
@@ -56,20 +52,15 @@ impl NotificationController {
         path: web::Path<Uuid>,
     ) -> impl Responder {
         let notification_id = path.into_inner();
-        
+
         match get_user_from_token(&req).await {
-            Ok(user) => {
-                NotificationService::mark_as_read(&pool, notification_id, user.id).await
-            }
+            Ok(user) => NotificationService::mark_as_read(&pool, notification_id, user.id).await,
             Err(response) => response,
         }
     }
 
     /// PUT /notifications/read-all - Mark all as read
-    pub async fn mark_all_as_read(
-        pool: web::Data<DbPool>,
-        req: HttpRequest,
-    ) -> impl Responder {
+    pub async fn mark_all_as_read(pool: web::Data<DbPool>, req: HttpRequest) -> impl Responder {
         match get_user_from_token(&req).await {
             Ok(user) => NotificationService::mark_all_as_read(&pool, user.id).await,
             Err(response) => response,
@@ -83,7 +74,7 @@ impl NotificationController {
         path: web::Path<Uuid>,
     ) -> impl Responder {
         let notification_id = path.into_inner();
-        
+
         match get_user_from_token(&req).await {
             Ok(user) => {
                 NotificationService::delete_notification(&pool, notification_id, user.id).await
@@ -93,10 +84,7 @@ impl NotificationController {
     }
 
     /// GET /notifications/count - Get unread count
-    pub async fn get_unread_count(
-        pool: web::Data<DbPool>,
-        req: HttpRequest,
-    ) -> impl Responder {
+    pub async fn get_unread_count(pool: web::Data<DbPool>, req: HttpRequest) -> impl Responder {
         match get_user_from_token(&req).await {
             Ok(user) => NotificationService::get_unread_count(&pool, user.id).await,
             Err(response) => response,
@@ -119,10 +107,4 @@ impl NotificationController {
             Err(response) => response,
         }
     }
-}
-
-#[derive(serde::Deserialize)]
-struct PaginationQuery {
-    limit: Option<i64>,
-    offset: Option<i64>,
 }
