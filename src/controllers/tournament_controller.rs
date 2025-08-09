@@ -1,4 +1,4 @@
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, HttpRequest, Responder};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -6,7 +6,6 @@ use crate::{
     config::DbPool,
     models::tournament::{EditableTournament, NewTournament, TournamentStatus},
     services::TournamentService,
-    utils::api_response::ApiResponse,
 };
 
 #[derive(Debug, Deserialize)]
@@ -41,10 +40,7 @@ pub struct TournamentController;
 
 impl TournamentController {
     // Basic CRUD operations
-    pub async fn create(
-        pool: web::Data<DbPool>,
-        data: web::Json<NewTournament>,
-    ) -> impl Responder {
+    pub async fn create(pool: web::Data<DbPool>, data: web::Json<NewTournament>) -> impl Responder {
         TournamentService::create_tournament(&pool, data.into_inner()).await
     }
 
@@ -96,10 +92,7 @@ impl TournamentController {
         TournamentService::search_tournaments(&pool, query.into_inner()).await
     }
 
-    pub async fn get_my_tournaments(
-        pool: web::Data<DbPool>,
-        req: HttpRequest,
-    ) -> impl Responder {
+    pub async fn get_my_tournaments(pool: web::Data<DbPool>, req: HttpRequest) -> impl Responder {
         // Extract user ID from JWT token in request
         TournamentService::get_my_tournaments(&pool, req).await
     }
@@ -138,10 +131,7 @@ impl TournamentController {
         TournamentService::get_tournament_stats(&pool, id.into_inner()).await
     }
 
-    pub async fn get_participants(
-        pool: web::Data<DbPool>,
-        id: web::Path<Uuid>,
-    ) -> impl Responder {
+    pub async fn get_participants(pool: web::Data<DbPool>, id: web::Path<Uuid>) -> impl Responder {
         TournamentService::get_tournament_participants(&pool, id.into_inner()).await
     }
 
@@ -173,12 +163,8 @@ impl TournamentController {
         template_id: web::Path<Uuid>,
         data: web::Json<NewTournament>,
     ) -> impl Responder {
-        TournamentService::create_from_template(
-            &pool,
-            template_id.into_inner(),
-            data.into_inner(),
-        )
-        .await
+        TournamentService::create_from_template(&pool, template_id.into_inner(), data.into_inner())
+            .await
     }
 
     // Organizer functions
@@ -191,12 +177,8 @@ impl TournamentController {
         id: web::Path<Uuid>,
         data: web::Json<serde_json::Value>,
     ) -> impl Responder {
-        TournamentService::update_tournament_settings(
-            &pool,
-            id.into_inner(),
-            data.into_inner(),
-        )
-        .await
+        TournamentService::update_tournament_settings(&pool, id.into_inner(), data.into_inner())
+            .await
     }
 
     // Sub-resources
@@ -204,10 +186,7 @@ impl TournamentController {
         TournamentService::get_tournament_categories(&pool, id.into_inner()).await
     }
 
-    pub async fn get_registrations(
-        pool: web::Data<DbPool>,
-        id: web::Path<Uuid>,
-    ) -> impl Responder {
+    pub async fn get_registrations(pool: web::Data<DbPool>, id: web::Path<Uuid>) -> impl Responder {
         TournamentService::get_tournament_registrations(&pool, id.into_inner()).await
     }
 }

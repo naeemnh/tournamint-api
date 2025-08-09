@@ -230,4 +230,37 @@ impl TournamentRepository {
 
         sqlx::query_as_with(&sql, values).fetch_one(&mut *tx).await
     }
+
+    pub async fn get_by_organizer(
+        tx: &mut PgConnection,
+        organizer_id: Uuid,
+    ) -> Result<Vec<Tournament>, sqlx::Error> {
+        let (sql, values) = Query::select()
+            .columns([
+                TournamentIden::Id,
+                TournamentIden::Name,
+                TournamentIden::Description,
+                TournamentIden::SportType,
+                TournamentIden::Format,
+                TournamentIden::Status,
+                TournamentIden::StartDate,
+                TournamentIden::EndDate,
+                TournamentIden::RegistrationStartDate,
+                TournamentIden::RegistrationEndDate,
+                TournamentIden::Venue,
+                TournamentIden::MaxParticipants,
+                TournamentIden::EntryFee,
+                TournamentIden::PrizePool,
+                TournamentIden::Rules,
+                TournamentIden::OrganizerId,
+                TournamentIden::CreatedAt,
+                TournamentIden::UpdatedAt,
+            ])
+            .from(TournamentIden::Table)
+            .and_where(Expr::col(TournamentIden::OrganizerId).eq(organizer_id))
+            .order_by(TournamentIden::StartDate, sea_query::Order::Desc)
+            .build_sqlx(PostgresQueryBuilder);
+
+        sqlx::query_as_with(&sql, values).fetch_all(&mut *tx).await
+    }
 }

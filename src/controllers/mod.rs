@@ -9,7 +9,7 @@ mod team_controller;
 mod team_member_controller;
 mod tournament_bracket_controller;
 mod tournament_category_controller;
-mod tournament_controller;
+pub mod tournament_controller;
 mod tournament_registration_controller;
 mod tournament_standings_controller;
 mod user_controller;

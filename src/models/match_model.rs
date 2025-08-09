@@ -168,7 +168,7 @@ pub struct CreateMatchRequest {
     pub metadata: Option<JsonValue>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateMatchRequest {
     pub scheduled_date: Option<DateTime<Utc>>,
     pub venue: Option<String>,
@@ -184,6 +184,126 @@ pub struct UpdateMatchStatusRequest {
     pub status: MatchStatus,
     pub winner_participant: Option<i32>,
     pub is_draw: Option<bool>,
+}
+
+// Additional request types for new methods
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CompleteMatchRequest {
+    pub winner_participant: i32,
+    pub is_draw: bool,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CancelMatchRequest {
+    pub reason: String,
+    pub notify_participants: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PostponeMatchRequest {
+    pub new_scheduled_date: DateTime<Utc>,
+    pub reason: String,
+    pub notify_participants: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RescheduleMatchRequest {
+    pub new_scheduled_date: DateTime<Utc>,
+    pub new_venue: Option<String>,
+    pub new_court_number: Option<String>,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LiveMatchUpdate {
+    pub current_score: Option<JsonValue>,
+    pub game_time: Option<i32>,
+    pub current_set: Option<i32>,
+    pub notes: Option<String>,
+    pub metadata: Option<JsonValue>,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+pub struct MatchComment {
+    pub id: Uuid,
+    pub match_id: Uuid,
+    pub user_id: Uuid,
+    pub comment: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AddMatchCommentRequest {
+    pub comment: String,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+pub struct MatchSubscription {
+    pub id: Uuid,
+    pub match_id: Uuid,
+    pub user_id: Uuid,
+    pub notification_preferences: JsonValue,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SubscribeToMatchRequest {
+    pub notification_preferences: Option<JsonValue>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BulkUpdateMatchesRequest {
+    pub match_ids: Vec<Uuid>,
+    pub updates: UpdateMatchRequest,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BulkCancelMatchesRequest {
+    pub match_ids: Vec<Uuid>,
+    pub reason: String,
+    pub notify_participants: Option<bool>,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+pub struct MatchAnalytics {
+    pub match_id: Uuid,
+    pub total_duration_minutes: Option<i32>,
+    pub sets_played: Option<i32>,
+    pub participant1_score: Option<JsonValue>,
+    pub participant2_score: Option<JsonValue>,
+    pub rally_stats: Option<JsonValue>,
+    pub performance_metrics: Option<JsonValue>,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+pub struct MatchStatistics {
+    pub match_id: Uuid,
+    pub statistics: JsonValue,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+pub struct MatchMedia {
+    pub id: Uuid,
+    pub match_id: Uuid,
+    pub media_type: String, // "video" or "photo"
+    pub file_url: String,
+    pub thumbnail_url: Option<String>,
+    pub file_size: Option<i64>,
+    pub duration: Option<i32>,
+    pub uploaded_by: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UploadMatchMediaRequest {
+    pub media_type: String,
+    pub file_name: String,
+    pub file_size: i64,
+    pub duration: Option<i32>,
 }
 
 pub enum MatchIden {
