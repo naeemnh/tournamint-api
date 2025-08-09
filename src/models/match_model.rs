@@ -97,7 +97,7 @@ pub struct EditableMatch {
     pub metadata: Option<JsonValue>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
 pub struct MatchWithParticipants {
     pub id: Uuid,
     pub tournament_category_id: Uuid,
@@ -109,6 +109,81 @@ pub struct MatchWithParticipants {
     pub venue: Option<String>,
     pub court_number: Option<String>,
     pub winner_participant: Option<i32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MatchStatusUpdate {
+    pub match_status: MatchStatus,
+    pub winner_participant: Option<i32>,
+    pub is_draw: Option<bool>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MatchScheduleRequest {
+    pub tournament_id: Option<Uuid>,
+    pub category_id: Option<Uuid>,
+    pub venue: Option<String>,
+    pub status: Option<MatchStatus>,
+    pub from_date: Option<DateTime<Utc>>,
+    pub to_date: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
+pub struct MatchScheduleItem {
+    pub id: Uuid,
+    pub tournament_category_id: Uuid,
+    pub tournament_name: String,
+    pub category_name: String,
+    pub participant1_name: String,
+    pub participant2_name: String,
+    pub match_type: MatchType,
+    pub match_status: MatchStatus,
+    pub scheduled_date: DateTime<Utc>,
+    pub venue: Option<String>,
+    pub court_number: Option<String>,
+    pub round_number: Option<i32>,
+}
+
+// Request DTOs
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateMatchRequest {
+    pub tournament_category_id: Uuid,
+    pub participant1_team_id: Option<Uuid>,
+    pub participant1_player_id: Option<Uuid>,
+    pub participant1_partner_id: Option<Uuid>,
+    pub participant2_team_id: Option<Uuid>,
+    pub participant2_player_id: Option<Uuid>,
+    pub participant2_partner_id: Option<Uuid>,
+    pub match_type: MatchType,
+    pub match_status: MatchStatus,
+    pub round_number: Option<i32>,
+    pub match_number: Option<i32>,
+    pub scheduled_date: DateTime<Utc>,
+    pub venue: Option<String>,
+    pub court_number: Option<String>,
+    pub referee_name: Option<String>,
+    pub umpire_name: Option<String>,
+    pub notes: Option<String>,
+    pub metadata: Option<JsonValue>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateMatchRequest {
+    pub scheduled_date: Option<DateTime<Utc>>,
+    pub venue: Option<String>,
+    pub court_number: Option<String>,
+    pub referee_name: Option<String>,
+    pub umpire_name: Option<String>,
+    pub notes: Option<String>,
+    pub metadata: Option<JsonValue>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateMatchStatusRequest {
+    pub status: MatchStatus,
+    pub winner_participant: Option<i32>,
+    pub is_draw: Option<bool>,
 }
 
 pub enum MatchIden {
