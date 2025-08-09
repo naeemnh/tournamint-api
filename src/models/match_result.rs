@@ -43,7 +43,7 @@ pub struct EditableMatchResult {
     pub participant2_stats: Option<JsonValue>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MatchScoreSummary {
     pub match_id: Uuid,
     pub participant1_sets_won: i64,
