@@ -1,8 +1,10 @@
 mod auth_controller;
-mod match_controller;
-mod match_result_controller;
-mod notification_controller;
+pub mod match_controller;
+pub mod match_result_controller;
+pub mod notification_controller;
+pub mod payment_controller;
 mod player_controller;
+pub mod statistics_controller;
 mod team_controller;
 mod team_member_controller;
 mod tournament_bracket_controller;
@@ -14,10 +16,11 @@ mod user_controller;
 mod user_profile_controller;
 
 pub use auth_controller::AuthController;
-pub use match_controller::MatchController;
-pub use match_result_controller::MatchResultController;
-pub use notification_controller::NotificationController;
+// pub use match_controller::MatchController;
+// pub use match_result_controller::MatchResultController;
+// pub use notification_controller::NotificationController;
 pub use player_controller::PlayerController;
+// pub use statistics_controller::StatisticsController;
 pub use team_controller::TeamController;
 pub use team_member_controller::TeamMemberController;
 pub use tournament_bracket_controller::TournamentBracketController;

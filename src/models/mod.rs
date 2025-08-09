@@ -1,8 +1,11 @@
 pub(crate) mod auth;
+pub(crate) mod common;
 pub(crate) mod match_model;
 pub(crate) mod match_result;
 pub(crate) mod notification;
+pub(crate) mod payment;
 pub(crate) mod player;
+pub(crate) mod statistics;
 pub(crate) mod team;
 pub(crate) mod team_member;
 pub(crate) mod token;

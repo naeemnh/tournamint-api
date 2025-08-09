@@ -4,7 +4,9 @@ mod auth;
 mod match_result_routes;
 mod match_routes;
 mod notification_routes;
+mod payment_routes;
 mod player;
+mod statistics_routes;
 mod team;
 mod team_member;
 mod tournament;
@@ -29,5 +31,8 @@ pub fn api_routes(app: &mut ServiceConfig) {
     match_result_routes::routes(app);
     tournament_bracket_routes::routes(app);
     tournament_standings_routes::routes(app);
-    app.service(notification_routes::notification_routes());
+    notification_routes::routes(app);
+    payment_routes::routes(app);
+    statistics_routes::routes(app);
+    statistics_routes::analytics_routes(app);
 }

@@ -1,7 +1,9 @@
 pub mod match_repository;
 pub mod match_result_repository;
 pub mod notification_repository;
+pub mod payment_repository;
 pub mod player_repository;
+pub mod statistics_repository;
 pub mod team_member_repository;
 pub mod team_repository;
 pub mod token_repository;
@@ -14,9 +16,11 @@ pub mod user_repository;
 pub mod user_profile_repository;
 
 pub use match_repository::MatchRepository;
-pub use match_result_repository::MatchResultRepository;
-pub use notification_repository::NotificationRepository;
+// pub use match_result_repository::MatchResultRepository;
+// pub use notification_repository::NotificationRepository;
+// pub use payment_repository::PaymentRepository;
 pub use player_repository::PlayerRepository;
+// pub use statistics_repository::StatisticsRepository;
 pub use team_member_repository::TeamMemberRepository;
 pub use team_repository::TeamRepository;
 pub use token_repository::TokenRepository;
