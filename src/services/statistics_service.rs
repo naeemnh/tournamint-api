@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::config::DbPool;
 use crate::formatters;
-use crate::models::statistics::{LeaderboardRequest, StatisticsFilters};
+use crate::models::statistics::{LeaderboardRequest};
 use crate::repositories::statistics_repository::StatisticsRepository;
 use crate::utils::db::with_transaction;
 

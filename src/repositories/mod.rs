@@ -15,7 +15,7 @@ pub mod tournament_standings_repository;
 pub mod user_repository;
 pub mod user_profile_repository;
 
-pub use match_repository::MatchRepository;
+// pub use match_repository::MatchRepository;
 // pub use match_result_repository::MatchResultRepository;
 // pub use notification_repository::NotificationRepository;
 // pub use payment_repository::PaymentRepository;

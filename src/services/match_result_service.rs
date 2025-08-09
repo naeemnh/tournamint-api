@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::{
     config::DbPool,
     formatters,
-    models::match_result::{MatchResult, NewMatchResult, EditableMatchResult, MatchScoreSummary},
+    models::match_result::{NewMatchResult, EditableMatchResult},
     repositories::match_result_repository::MatchResultRepository,
     utils::db::with_transaction,
 };

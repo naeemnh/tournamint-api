@@ -3,6 +3,14 @@ name = "server"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "server"
+path = "src/main.rs"
+
+[lib]
+name = "server"
+path = "src/lib.rs"
+
 [dependencies]
 actix-web = "4.0"
 anyhow = "1.0"
@@ -23,3 +31,7 @@ sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-native-tls", "u
 uuid = { version = "1.0", features = ["v4", "serde"] }
 validator = { version = "0.19", features = ["derive"] }
 tokio = { version = "1.0", features = ["full"] }
+
+[dev-dependencies]
+mockall = "0.12"
+tokio-test = "0.4"

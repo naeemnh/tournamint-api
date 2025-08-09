@@ -16,12 +16,12 @@ mod user_service;
 mod user_profile_service;
 
 pub use auth_service::AuthService;
-pub use match_result_service::MatchResultService;
+// pub use match_result_service::MatchResultService;
 pub use match_service::MatchService;
 pub use notification_service::NotificationService;
-pub use payment_service::PaymentService;
+// pub use payment_service::PaymentService;
 pub use player_service::PlayerService;
-pub use statistics_service::StatisticsService;
+// pub use statistics_service::StatisticsService;
 pub use team_member_service::TeamMemberService;
 pub use team_service::TeamService;
 pub use tournament_bracket_service::TournamentBracketService;

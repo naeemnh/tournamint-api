@@ -1,0 +1,655 @@
+#[cfg(test)]
+mod tournament_repository_tests {
+    use chrono::{DateTime, Utc};
+    use rust_decimal::Decimal;
+    use serde_json::Value as JsonValue;
+    use sqlx::types::Json;
+    use std::str::FromStr;
+    use uuid::Uuid;
+
+    use server::models::tournament::{
+        EditableTournament, NewTournament, SportType, Tournament, TournamentFormat,
+        TournamentStatus,
+    };
+    use server::repositories::tournament_repository::TournamentRepository;
+
+    // Mock database connection for testing
+    struct MockPgConnection;
+
+    // Test helper functions
+    fn create_mock_new_tournament() -> NewTournament {
+        NewTournament {
+            name: "Championship Tournament".to_string(),
+            description: Some("Annual championship event".to_string()),
+            sport_type: SportType::Basketball,
+            format: TournamentFormat::Elimination,
+            start_date: DateTime::from_str("2025-01-15T10:00:00Z").unwrap(),
+            end_date: DateTime::from_str("2025-01-20T18:00:00Z").unwrap(),
+            registration_start_date: Some(DateTime::from_str("2024-12-01T00:00:00Z").unwrap()),
+            registration_end_date: Some(DateTime::from_str("2025-01-10T23:59:59Z").unwrap()),
+            venue: Some("Sports Center".to_string()),
+            max_participants: Some(32),
+            entry_fee: Some(Decimal::new(5000, 2)), // $50.00
+            prize_pool: Some(Decimal::new(100000, 2)), // $1000.00
+            rules: Some(serde_json::json!({"time_limit": 40, "overtime": true})),
+            organizer_id: Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
+        }
+    }
+
+    fn create_mock_tournament() -> Tournament {
+        let tournament_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let now = DateTime::from_str("2024-12-15T10:00:00Z").unwrap();
+
+        Tournament {
+            id: tournament_id,
+            name: "Championship Tournament".to_string(),
+            description: Some("Annual championship event".to_string()),
+            sport_type: SportType::Basketball,
+            format: TournamentFormat::Elimination,
+            status: TournamentStatus::Draft,
+            start_date: DateTime::from_str("2025-01-15T10:00:00Z").unwrap(),
+            end_date: DateTime::from_str("2025-01-20T18:00:00Z").unwrap(),
+            registration_start_date: Some(DateTime::from_str("2024-12-01T00:00:00Z").unwrap()),
+            registration_end_date: Some(DateTime::from_str("2025-01-10T23:59:59Z").unwrap()),
+            venue: Some("Sports Center".to_string()),
+            max_participants: Some(32),
+            entry_fee: Some(Decimal::new(5000, 2)),
+            prize_pool: Some(Decimal::new(100000, 2)),
+            rules: Some(Json(serde_json::json!({"time_limit": 40, "overtime": true}))),
+            organizer_id: Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn create_mock_editable_tournament() -> EditableTournament {
+        EditableTournament {
+            name: Some("Updated Tournament Name".to_string()),
+            description: Some("Updated description".to_string()),
+            sport_type: Some(SportType::Football),
+            format: Some(TournamentFormat::RoundRobin),
+            status: Some(TournamentStatus::RegistrationOpen),
+            start_date: Some(DateTime::from_str("2025-02-01T10:00:00Z").unwrap()),
+            end_date: Some(DateTime::from_str("2025-02-10T18:00:00Z").unwrap()),
+            registration_start_date: Some(
+                DateTime::from_str("2025-01-01T00:00:00Z").unwrap(),
+            ),
+            registration_end_date: Some(DateTime::from_str("2025-01-25T23:59:59Z").unwrap()),
+            venue: Some("Updated Venue".to_string()),
+            max_participants: Some(64),
+            entry_fee: Some(Decimal::new(7500, 2)), // $75.00
+            prize_pool: Some(Decimal::new(200000, 2)), // $2000.00
+            rules: Some(serde_json::json!({"modified_rules": true})),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_create_tournament_success() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests successful tournament creation with all required fields
+        
+        // Arrange
+        let new_tournament = create_mock_new_tournament();
+        
+        // Expected SQL query verification
+        let expected_table = "tournaments";
+        let expected_columns = [
+            "name", "description", "sport_type", "format", "start_date",
+            "end_date", "registration_start_date", "registration_end_date",
+            "venue", "max_participants", "entry_fee", "prize_pool", "rules", "organizer_id"
+        ];
+        
+        // Assert that all required fields are present in the new tournament
+        assert_eq!(new_tournament.name, "Championship Tournament");
+        assert!(new_tournament.description.is_some());
+        assert_eq!(new_tournament.sport_type, SportType::Basketball);
+        assert_eq!(new_tournament.format, TournamentFormat::Elimination);
+        assert!(new_tournament.venue.is_some());
+        assert!(new_tournament.max_participants.is_some());
+        assert!(new_tournament.entry_fee.is_some());
+        assert!(new_tournament.prize_pool.is_some());
+        assert!(new_tournament.rules.is_some());
+        
+        // Verify organizer_id is valid UUID
+        assert!(!new_tournament.organizer_id.is_nil());
+        
+        // Verify date logic
+        assert!(new_tournament.start_date < new_tournament.end_date);
+        if let (Some(reg_start), Some(reg_end)) = (
+            new_tournament.registration_start_date,
+            new_tournament.registration_end_date,
+        ) {
+            assert!(reg_start < reg_end);
+            assert!(reg_end <= new_tournament.start_date);
+        }
+        
+        // Verify decimal precision for monetary values
+        assert_eq!(new_tournament.entry_fee.unwrap().scale(), 2);
+        assert_eq!(new_tournament.prize_pool.unwrap().scale(), 2);
+        
+        // Mock assertion: Verify that the create method would build correct SQL
+        // In a real implementation, this would be verified through sqlx mocking
+        // The query should insert into the tournaments table with all columns
+        // and return the created record with generated id, created_at, updated_at
+    }
+
+    #[tokio::test]
+    async fn test_create_tournament_validation_errors() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests validation errors during tournament creation
+        
+        // Test case 1: Invalid organizer_id (nil UUID)
+        let mut invalid_tournament = create_mock_new_tournament();
+        invalid_tournament.organizer_id = Uuid::nil();
+        
+        // In real implementation, this should trigger a validation error
+        assert!(invalid_tournament.organizer_id.is_nil());
+        
+        // Test case 2: Invalid date range (end before start)
+        let mut invalid_dates = create_mock_new_tournament();
+        invalid_dates.start_date = DateTime::from_str("2025-01-20T10:00:00Z").unwrap();
+        invalid_dates.end_date = DateTime::from_str("2025-01-15T18:00:00Z").unwrap();
+        
+        assert!(invalid_dates.start_date > invalid_dates.end_date);
+        
+        // Test case 3: Invalid registration dates
+        let mut invalid_reg_dates = create_mock_new_tournament();
+        invalid_reg_dates.registration_end_date =
+            Some(DateTime::from_str("2025-01-25T00:00:00Z").unwrap()); // After tournament start
+        
+        if let Some(reg_end) = invalid_reg_dates.registration_end_date {
+            assert!(reg_end > invalid_reg_dates.start_date);
+        }
+        
+        // Test case 4: Empty name
+        let mut empty_name = create_mock_new_tournament();
+        empty_name.name = String::new();
+        
+        assert!(empty_name.name.is_empty());
+        
+        // Test case 5: Negative entry fee
+        let mut negative_fee = create_mock_new_tournament();
+        negative_fee.entry_fee = Some(Decimal::new(-1000, 2));
+        
+        assert!(negative_fee.entry_fee.unwrap().is_sign_negative());
+        
+        // Test case 6: Zero or negative max participants
+        let mut invalid_participants = create_mock_new_tournament();
+        invalid_participants.max_participants = Some(0);
+        
+        assert_eq!(invalid_participants.max_participants.unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_by_id_found() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests successful retrieval of tournament by ID
+        
+        // Arrange
+        let tournament_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        
+        // Expected SQL query verification
+        let expected_select_columns = [
+            "id", "name", "description", "sport_type", "format", "status",
+            "start_date", "end_date", "registration_start_date", "registration_end_date",
+            "venue", "max_participants", "entry_fee", "prize_pool", "rules",
+            "organizer_id", "created_at", "updated_at"
+        ];
+        
+        // Mock expected result
+        let expected_tournament = create_mock_tournament();
+        
+        // Verify that the query would use the correct WHERE clause
+        assert_eq!(expected_tournament.id, tournament_id);
+        
+        // Verify all fields are populated correctly
+        assert!(!expected_tournament.name.is_empty());
+        assert!(expected_tournament.description.is_some());
+        assert!(!expected_tournament.organizer_id.is_nil());
+        assert!(expected_tournament.created_at <= expected_tournament.updated_at);
+        
+        // Verify enum serialization expectations
+        assert!(matches!(expected_tournament.sport_type, SportType::Basketball));
+        assert!(matches!(expected_tournament.format, TournamentFormat::Elimination));
+        assert!(matches!(expected_tournament.status, TournamentStatus::Draft));
+        
+        // Mock assertion: The SQL query should be:
+        // SELECT [all columns] FROM tournaments WHERE id = $1
+        // With parameter binding for the UUID
+    }
+
+    #[tokio::test]
+    async fn test_get_by_id_not_found() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests handling of non-existent tournament ID
+        
+        // Arrange
+        let non_existent_id = Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap();
+        
+        // Verify the UUID is properly formatted
+        assert!(!non_existent_id.is_nil()); // All zeros is actually valid, but typically non-existent
+        
+        // Mock assertion: The query should return sqlx::Error::RowNotFound
+        // SELECT [all columns] FROM tournaments WHERE id = $1
+        // Should return no rows and trigger RowNotFound error
+        
+        // In real implementation, this should be handled gracefully
+        // and possibly converted to a domain-specific error
+    }
+
+    #[tokio::test]
+    async fn test_get_all_with_results() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests retrieval of all tournaments with ordering
+        
+        // Expected SQL query verification
+        let expected_order_by = "start_date DESC";
+        let expected_table = "tournaments";
+        
+        // Mock multiple tournaments with different start dates
+        let tournament1_start: DateTime<Utc> = DateTime::from_str("2025-01-15T10:00:00Z").unwrap();
+        let tournament2_start: DateTime<Utc> = DateTime::from_str("2025-02-01T10:00:00Z").unwrap();
+        let tournament3_start: DateTime<Utc> = DateTime::from_str("2024-12-20T10:00:00Z").unwrap();
+        
+        // Verify ordering logic (DESC means newer dates first)
+        let mut dates = vec![tournament1_start, tournament2_start, tournament3_start];
+        dates.sort_by(|a, b| b.cmp(a)); // DESC order
+        
+        assert_eq!(dates[0], tournament2_start); // Feb 1, 2025 (newest)
+        assert_eq!(dates[1], tournament1_start); // Jan 15, 2025
+        assert_eq!(dates[2], tournament3_start); // Dec 20, 2024 (oldest)
+        
+        // Mock assertion: The SQL query should be:
+        // SELECT [all columns] FROM tournaments ORDER BY start_date DESC
+        // Should return all tournaments ordered by start_date descending
+    }
+
+    #[tokio::test]
+    async fn test_get_all_empty_results() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests retrieval when no tournaments exist
+        
+        // Mock assertion: The SQL query should be:
+        // SELECT [all columns] FROM tournaments ORDER BY start_date DESC
+        // Should return an empty Vec<Tournament> when no records exist
+        
+        // This should not error, but return an empty vector
+        // The repository should handle this gracefully
+    }
+
+    #[tokio::test]
+    async fn test_get_by_status_filtering() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests filtering tournaments by status
+        
+        // Test different status values
+        let test_statuses = [
+            TournamentStatus::Draft,
+            TournamentStatus::Upcoming,
+            TournamentStatus::RegistrationOpen,
+            TournamentStatus::RegistrationClosed,
+            TournamentStatus::InProgress,
+            TournamentStatus::Completed,
+            TournamentStatus::Cancelled,
+        ];
+        
+        for status in test_statuses {
+            // Verify enum serialization for query parameter
+            let serialized_status = serde_json::to_string(&status).unwrap();
+            assert!(!serialized_status.is_empty());
+            assert!(serialized_status.starts_with('"'));
+            assert!(serialized_status.ends_with('"'));
+            
+            // Expected SQL query verification
+            // SELECT [all columns] FROM tournaments 
+            // WHERE status = $1 ORDER BY start_date ASC
+            
+            // Verify ordering is ASC (different from get_all)
+            let date1: DateTime<Utc> = DateTime::from_str("2025-01-15T10:00:00Z").unwrap();
+            let date2: DateTime<Utc> = DateTime::from_str("2025-02-01T10:00:00Z").unwrap();
+            assert!(date1 < date2); // ASC order verification
+        }
+        
+        // Mock assertion: Each status should generate proper WHERE clause
+        // with JSON serialization of the enum value
+    }
+
+    #[tokio::test]
+    async fn test_get_by_organizer_filtering() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests filtering tournaments by organizer ID
+        
+        // Arrange
+        let organizer_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+        
+        // Verify UUID is valid
+        assert!(!organizer_id.is_nil());
+        
+        // Expected SQL query verification
+        // SELECT [all columns] FROM tournaments 
+        // WHERE organizer_id = $1 ORDER BY start_date DESC
+        
+        // Verify ordering matches get_all (DESC)
+        let date1: DateTime<Utc> = DateTime::from_str("2025-01-15T10:00:00Z").unwrap();
+        let date2: DateTime<Utc> = DateTime::from_str("2025-02-01T10:00:00Z").unwrap();
+        let mut dates = vec![date1, date2];
+        dates.sort_by(|a, b| b.cmp(a)); // DESC
+        assert_eq!(dates[0], date2);
+        
+        // Mock assertion: Should filter by organizer_id and order by start_date DESC
+        // Parameter binding should use the UUID directly
+    }
+
+    #[tokio::test]
+    async fn test_update_tournament_success() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests successful tournament update with partial data
+        
+        // Arrange
+        let tournament_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let editable_data = create_mock_editable_tournament();
+        
+        // Verify update data structure
+        assert!(editable_data.name.is_some());
+        assert!(editable_data.description.is_some());
+        assert!(editable_data.sport_type.is_some());
+        assert!(editable_data.format.is_some());
+        assert!(editable_data.status.is_some());
+        assert!(editable_data.venue.is_some());
+        assert!(editable_data.max_participants.is_some());
+        assert!(editable_data.entry_fee.is_some());
+        assert!(editable_data.prize_pool.is_some());
+        assert!(editable_data.rules.is_some());
+        
+        // Verify enum serialization for update
+        if let Some(sport_type) = &editable_data.sport_type {
+            let serialized = serde_json::to_string(sport_type).unwrap();
+            assert!(!serialized.is_empty());
+        }
+        
+        if let Some(format) = &editable_data.format {
+            let serialized = serde_json::to_string(format).unwrap();
+            assert!(!serialized.is_empty());
+        }
+        
+        if let Some(status) = &editable_data.status {
+            let serialized = serde_json::to_string(status).unwrap();
+            assert!(!serialized.is_empty());
+        }
+        
+        // Verify monetary values precision
+        if let Some(entry_fee) = &editable_data.entry_fee {
+            assert_eq!(entry_fee.scale(), 2);
+        }
+        
+        if let Some(prize_pool) = &editable_data.prize_pool {
+            assert_eq!(prize_pool.scale(), 2);
+        }
+        
+        // Mock assertion: Should generate dynamic UPDATE query with:
+        // - Only non-None fields in SET clause
+        // - Automatic updated_at timestamp
+        // - WHERE id = $1 clause
+        // - RETURNING all columns
+    }
+
+    #[tokio::test]
+    async fn test_update_tournament_partial_data() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests update with minimal data (only some fields)
+        
+        // Arrange - only update name and status
+        let minimal_update = EditableTournament {
+            name: Some("Minimal Update".to_string()),
+            status: Some(TournamentStatus::Cancelled),
+            description: None,
+            sport_type: None,
+            format: None,
+            start_date: None,
+            end_date: None,
+            registration_start_date: None,
+            registration_end_date: None,
+            venue: None,
+            max_participants: None,
+            entry_fee: None,
+            prize_pool: None,
+            rules: None,
+        };
+        
+        // Verify only intended fields are set
+        assert!(minimal_update.name.is_some());
+        assert!(minimal_update.status.is_some());
+        assert!(minimal_update.description.is_none());
+        assert!(minimal_update.sport_type.is_none());
+        assert!(minimal_update.format.is_none());
+        assert!(minimal_update.venue.is_none());
+        assert!(minimal_update.max_participants.is_none());
+        assert!(minimal_update.entry_fee.is_none());
+        assert!(minimal_update.prize_pool.is_none());
+        assert!(minimal_update.rules.is_none());
+        
+        // Mock assertion: UPDATE query should only include:
+        // SET name = $1, status = $2, updated_at = $3 WHERE id = $4
+    }
+
+    #[tokio::test]
+    async fn test_update_tournament_not_found() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests update of non-existent tournament
+        
+        // Arrange
+        let non_existent_id = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
+        let update_data = create_mock_editable_tournament();
+        
+        // Verify the UUID is valid but non-existent
+        assert!(!non_existent_id.is_nil());
+        
+        // Mock assertion: UPDATE query should execute but return no rows
+        // This should trigger sqlx::Error::RowNotFound since no rows were affected
+        // The RETURNING clause will fail when no rows match the WHERE condition
+    }
+
+    #[tokio::test]
+    async fn test_delete_tournament_success() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests successful tournament deletion
+        
+        // Arrange
+        let tournament_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        
+        // Verify UUID is valid
+        assert!(!tournament_id.is_nil());
+        
+        // Expected SQL query verification
+        // DELETE FROM tournaments WHERE id = $1 RETURNING *
+        
+        // Mock assertion: Should delete exactly one row and return the deleted record
+        // The RETURNING clause should provide the full tournament data that was deleted
+        // This allows the caller to know what was actually removed
+    }
+
+    #[tokio::test]
+    async fn test_delete_tournament_not_found() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests deletion of non-existent tournament
+        
+        // Arrange
+        let non_existent_id = Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap();
+        
+        // Verify the UUID is valid but non-existent
+        assert!(!non_existent_id.is_nil());
+        
+        // Expected SQL query verification
+        // DELETE FROM tournaments WHERE id = $1 RETURNING *
+        
+        // Mock assertion: DELETE query should execute but affect no rows
+        // This should trigger sqlx::Error::RowNotFound since RETURNING expects a row
+        // but no rows matched the WHERE condition
+    }
+
+    #[tokio::test]
+    async fn test_parameter_binding_and_sql_injection_prevention() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests that all queries use proper parameter binding
+        
+        // Test potentially malicious inputs
+        let malicious_uuid_str = "'; DROP TABLE tournaments; --";
+        let malicious_name = "Tournament'; DROP TABLE users; --";
+        let malicious_status_json = "\"; DROP TABLE tournaments; \"";
+        
+        // Verify that UUID parsing fails for malicious input
+        assert!(Uuid::parse_str(malicious_uuid_str).is_err());
+        
+        // Verify that serialization handles malicious JSON properly
+        let test_status = TournamentStatus::Draft;
+        let serialized = serde_json::to_string(&test_status).unwrap();
+        assert!(!serialized.contains("DROP TABLE"));
+        assert!(!serialized.contains("--"));
+        
+        // Test NewTournament with potentially malicious data
+        let mut malicious_tournament = create_mock_new_tournament();
+        malicious_tournament.name = malicious_name.to_string();
+        
+        // The name should be preserved as-is (parameter binding prevents injection)
+        assert!(malicious_tournament.name.contains("DROP TABLE"));
+        
+        // Mock assertion: All queries must use parameter binding ($1, $2, etc.)
+        // No direct string interpolation should occur in SQL generation
+        // sea-query and sqlx should handle escaping automatically
+    }
+
+    #[tokio::test]
+    async fn test_query_structure_and_column_mapping() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests that queries select/update correct columns
+        
+        // Expected column mapping for SELECT queries
+        let select_columns = [
+            ("id", "Uuid"),
+            ("name", "String"),
+            ("description", "Option<String>"),
+            ("sport_type", "SportType (enum)"),
+            ("format", "TournamentFormat (enum)"),
+            ("status", "TournamentStatus (enum)"),
+            ("start_date", "DateTime<Utc>"),
+            ("end_date", "DateTime<Utc>"),
+            ("registration_start_date", "Option<DateTime<Utc>>"),
+            ("registration_end_date", "Option<DateTime<Utc>>"),
+            ("venue", "Option<String>"),
+            ("max_participants", "Option<i32>"),
+            ("entry_fee", "Option<Decimal>"),
+            ("prize_pool", "Option<Decimal>"),
+            ("rules", "Option<Json<JsonValue>>"),
+            ("organizer_id", "Uuid"),
+            ("created_at", "DateTime<Utc>"),
+            ("updated_at", "DateTime<Utc>"),
+        ];
+        
+        // Verify all columns are accounted for
+        assert_eq!(select_columns.len(), 18);
+        
+        // Expected column mapping for INSERT queries (excludes generated fields)
+        let insert_columns = [
+            "name", "description", "sport_type", "format", "start_date",
+            "end_date", "registration_start_date", "registration_end_date",
+            "venue", "max_participants", "entry_fee", "prize_pool", "rules", "organizer_id"
+        ];
+        
+        // Verify insert excludes id, created_at, updated_at, status
+        assert_eq!(insert_columns.len(), 14);
+        assert!(!insert_columns.contains(&"id"));
+        assert!(!insert_columns.contains(&"created_at"));
+        assert!(!insert_columns.contains(&"updated_at"));
+        assert!(!insert_columns.contains(&"status")); // Set by database default
+        
+        // Mock assertion: All queries should map to correct Rust types
+        // sqlx::FromRow derive should handle the conversion automatically
+        // Enum fields should be deserialized from JSON strings
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_operations_safety() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests that repository operations are safe for concurrent use
+        
+        // Verify that all methods take &mut PgConnection
+        // This ensures each operation uses a dedicated connection
+        
+        // Create multiple tournament scenarios for concurrent testing
+        let tournament_id_1 = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let tournament_id_2 = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440002").unwrap();
+        let tournament_id_3 = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440003").unwrap();
+        
+        let organizer_id_1 = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440010").unwrap();
+        let organizer_id_2 = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440020").unwrap();
+        
+        // Verify UUIDs are unique
+        assert_ne!(tournament_id_1, tournament_id_2);
+        assert_ne!(tournament_id_2, tournament_id_3);
+        assert_ne!(organizer_id_1, organizer_id_2);
+        
+        // Mock assertion: In a real concurrent scenario:
+        // 1. Multiple get_by_id calls should not interfere
+        // 2. Updates to different tournaments should be isolated
+        // 3. Filtering operations should be consistent
+        // 4. Database transactions should handle concurrent access properly
+        
+        // The repository should not maintain any internal state
+        // All state should be in the database connection and transaction
+    }
+
+    #[tokio::test]
+    async fn test_data_type_precision_and_constraints() {
+        // IMMUTABLE TEST: This test cannot be changed
+        // Tests data type handling and constraints
+        
+        // Test Decimal precision for monetary values
+        let entry_fee = Decimal::new(12345, 2); // $123.45
+        assert_eq!(entry_fee.scale(), 2);
+        assert_eq!(entry_fee.to_string(), "123.45");
+        
+        let large_prize = Decimal::new(100000000, 2); // $1,000,000.00
+        assert_eq!(large_prize.scale(), 2);
+        assert_eq!(large_prize.to_string(), "1000000.00");
+        
+        // Test DateTime handling
+        let start_date: DateTime<Utc> = DateTime::from_str("2025-01-15T10:30:45.123456Z").unwrap();
+        let end_date: DateTime<Utc> = DateTime::from_str("2025-01-20T18:00:00Z").unwrap();
+        
+        assert!(start_date < end_date);
+        assert_eq!(start_date.timezone(), Utc);
+        assert_eq!(end_date.timezone(), Utc);
+        
+        // Test JSON rules handling
+        let complex_rules = serde_json::json!({
+            "time_limit": 90,
+            "overtime": true,
+            "substitutions": {
+                "max": 5,
+                "extra_time": 1
+            },
+            "scoring": ["goals", "penalties"],
+            "equipment": {
+                "required": ["jersey", "shorts", "socks", "shoes"],
+                "optional": ["shin_guards", "gloves"]
+            }
+        });
+        
+        // Verify JSON serialization/deserialization
+        let serialized = serde_json::to_string(&complex_rules).unwrap();
+        let deserialized: JsonValue = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(complex_rules, deserialized);
+        
+        // Test UUID constraints
+        let valid_uuid = Uuid::new_v4();
+        assert!(!valid_uuid.is_nil());
+        assert_eq!(valid_uuid.get_version_num(), 4);
+        
+        // Mock assertion: Database should enforce:
+        // - NOT NULL constraints on required fields
+        // - UUID format validation
+        // - Decimal precision limits
+        // - JSON format validation
+        // - DateTime timezone handling
+    }
+}

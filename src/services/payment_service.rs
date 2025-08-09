@@ -7,7 +7,7 @@ use chrono::Utc;
 use crate::config::DbPool;
 use crate::formatters;
 use crate::models::payment::{
-    NewPayment, Payment, PaymentStatus, PaymentStatusUpdate, ProcessPaymentRequest, RefundRequest,
+    NewPayment, PaymentStatus, PaymentStatusUpdate, ProcessPaymentRequest, RefundRequest,
 };
 use crate::repositories::payment_repository::PaymentRepository;
 use crate::utils::db::with_transaction;

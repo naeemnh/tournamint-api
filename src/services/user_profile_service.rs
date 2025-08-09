@@ -1,6 +1,5 @@
 use actix_web::HttpResponse;
 use oauth2::http::StatusCode;
-use serde_json::Value;
 use uuid::Uuid;
 
 use crate::config::DbPool;

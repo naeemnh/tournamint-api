@@ -13,6 +13,7 @@ pub struct TournamentSearchQuery {
     pub name: Option<String>,
     pub sport_type: Option<String>,
     pub status: Option<String>,
+    #[allow(dead_code)]
     pub format: Option<String>,
     pub location: Option<String>,
     pub date_from: Option<String>,

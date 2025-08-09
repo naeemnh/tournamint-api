@@ -11,11 +11,13 @@ pub struct PaginationQuery {
 
 impl PaginationQuery {
     /// Get the limit value with a default and maximum cap
+    #[allow(dead_code)]
     pub fn get_limit(&self, default: i64, max: i64) -> i64 {
         self.limit.unwrap_or(default).min(max)
     }
 
     /// Get the offset value with a default of 0
+    #[allow(dead_code)]
     pub fn get_offset(&self) -> i64 {
         self.offset.unwrap_or(0)
     }
@@ -23,6 +25,7 @@ impl PaginationQuery {
 
 /// Common date range query parameters
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct DateRangeQuery {
     pub from_date: Option<chrono::DateTime<chrono::Utc>>,
     pub to_date: Option<chrono::DateTime<chrono::Utc>>,

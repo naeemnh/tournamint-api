@@ -144,6 +144,7 @@ pub struct LeaderboardRequest {
 }
 
 // Enum for different types of statistics identifiers
+#[allow(dead_code)]
 pub enum StatisticsIden {
     PlayersTable,
     TeamsTable,

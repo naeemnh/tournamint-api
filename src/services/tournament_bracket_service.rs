@@ -1,8 +1,6 @@
 use actix_web::HttpResponse;
 use oauth2::http::StatusCode;
-use rust_decimal::Decimal;
 use serde_json::{json, Value as JsonValue};
-use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::{
@@ -11,14 +9,13 @@ use crate::{
     models::{
         tournament_bracket::{
             BracketType, BracketStatus, GenerateBracketRequest, NewTournamentBracket,
-            EditableTournamentBracket, BracketResponse, BracketMatch, BracketParticipant,
+            BracketResponse, BracketMatch, BracketParticipant,
             BracketNode,
         },
-        match_model::{MatchType, MatchStatus, NewMatch},
+        match_model::{MatchType, NewMatch},
     },
     repositories::{
         TournamentBracketRepository,
-        MatchRepository,
     },
     utils::db::with_transaction,
 };
@@ -435,7 +432,7 @@ impl TournamentBracketService {
         // Determine match type based on round and bracket structure
         let match_type = Self::determine_match_type(round, position);
 
-        let new_match = NewMatch {
+        let _new_match = NewMatch {
             tournament_category_id: _category_id.unwrap_or(_tournament_id), // Use tournament_id if no category
             participant1_team_id: participant1_id,
             participant1_player_id: None,
