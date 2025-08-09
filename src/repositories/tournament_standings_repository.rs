@@ -6,12 +6,13 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::models::tournament_standings::{
-    EditableTournamentStandings, NewTournamentStandings, TournamentStandings,
-    TournamentStandingsIden, ParticipantStats,
+    EditableTournamentStandings, NewTournamentStandings, ParticipantStats, TournamentStandings,
+    TournamentStandingsIden,
 };
 
 pub struct TournamentStandingsRepository;
 
+#[allow(dead_code)]
 impl TournamentStandingsRepository {
     pub async fn create(
         tx: &mut PgConnection,
@@ -286,10 +287,7 @@ impl TournamentStandingsRepository {
         tournament_id: Uuid,
         category_id: Option<Uuid>,
     ) -> Result<u64, sqlx::Error> {
-        let mut sort_order = vec![
-            "points DESC".to_string(),
-            "matches_won DESC".to_string(),
-        ];
+        let mut sort_order = vec!["points DESC".to_string(), "matches_won DESC".to_string()];
 
         // Add goal difference for sports that use it
         sort_order.push("goal_difference DESC".to_string());
@@ -330,7 +328,15 @@ impl TournamentStandingsRepository {
     ) -> Result<u64, sqlx::Error> {
         let mut affected_rows = 0;
 
-        for (tournament_id, category_id, participant_id, participant_name, participant_type, stats) in standings_data {
+        for (
+            tournament_id,
+            category_id,
+            participant_id,
+            participant_name,
+            participant_type,
+            stats,
+        ) in standings_data
+        {
             let upsert_sql = r#"
                 INSERT INTO tournament_standings (
                     tournament_id, category_id, participant_id, participant_name, participant_type,

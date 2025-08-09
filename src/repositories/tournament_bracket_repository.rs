@@ -5,12 +5,13 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::models::tournament_bracket::{
-    EditableTournamentBracket, NewTournamentBracket, TournamentBracket, TournamentBracketIden,
-    BracketStatus,
+    BracketStatus, EditableTournamentBracket, NewTournamentBracket, TournamentBracket,
+    TournamentBracketIden,
 };
 
 pub struct TournamentBracketRepository;
 
+#[allow(dead_code)]
 impl TournamentBracketRepository {
     pub async fn create(
         tx: &mut PgConnection,
@@ -152,10 +153,7 @@ impl TournamentBracketRepository {
         sqlx::query_as_with(&sql, values).fetch_one(&mut *tx).await
     }
 
-    pub async fn delete(
-        tx: &mut PgConnection,
-        id: Uuid,
-    ) -> Result<TournamentBracket, sqlx::Error> {
+    pub async fn delete(tx: &mut PgConnection, id: Uuid) -> Result<TournamentBracket, sqlx::Error> {
         let (sql, values) = Query::delete()
             .from_table(TournamentBracketIden::Table)
             .and_where(Expr::col(TournamentBracketIden::Id).eq(id))

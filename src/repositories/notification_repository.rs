@@ -8,6 +8,7 @@ use crate::models::notification::{NewNotification, Notification, NotificationIde
 
 pub struct NotificationRepository;
 
+#[allow(dead_code)]
 impl NotificationRepository {
     pub async fn create(
         tx: &mut PgConnection,

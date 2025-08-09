@@ -11,6 +11,7 @@ use crate::models::user_profile::{
 
 pub struct UserProfileRepository;
 
+#[allow(dead_code)]
 impl UserProfileRepository {
     pub async fn find_by_user_id(
         tx: &mut PgConnection,

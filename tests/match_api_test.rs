@@ -1,13 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use actix_web::{test, web, App};
     use chrono::Utc;
     use uuid::Uuid;
 
-    use crate::{
+    use crate::server::{
         config::DbPool,
-        models::match_model::{NewMatch, MatchType, MatchStatus, EditableMatch, MatchStatusUpdate},
+        models::match_model::{EditableMatch, MatchStatus, MatchStatusUpdate, MatchType, NewMatch},
         routes::match_routes,
     };
 
@@ -16,8 +15,9 @@ mod tests {
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(DbPool::default())) // Mock pool
-                .configure(match_routes::routes)
-        ).await;
+                .configure(match_routes::routes),
+        )
+        .await;
 
         let new_match = NewMatch {
             tournament_category_id: Uuid::new_v4(),
@@ -45,19 +45,20 @@ mod tests {
             .to_request();
 
         let resp = test::call_service(&app, req).await;
-        
+
         // Would normally check for 201 Created status
         // This is a basic structure test
         assert!(resp.status().is_success() || resp.status().is_client_error());
     }
 
-    #[actix_web::test] 
+    #[actix_web::test]
     async fn test_get_match_by_id() {
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(DbPool::default())) // Mock pool
-                .configure(match_routes::routes)
-        ).await;
+                .configure(match_routes::routes),
+        )
+        .await;
 
         let match_id = Uuid::new_v4();
         let req = test::TestRequest::get()
@@ -65,7 +66,7 @@ mod tests {
             .to_request();
 
         let resp = test::call_service(&app, req).await;
-        
+
         // Would normally check response based on actual database state
         assert!(resp.status().is_success() || resp.status().is_client_error());
     }
@@ -74,9 +75,10 @@ mod tests {
     async fn test_update_match_status() {
         let app = test::init_service(
             App::new()
-                .app_data(web::Data::new(DbPool::default())) // Mock pool  
-                .configure(match_routes::routes)
-        ).await;
+                .app_data(web::Data::new(DbPool::default())) // Mock pool
+                .configure(match_routes::routes),
+        )
+        .await;
 
         let match_id = Uuid::new_v4();
         let status_update = MatchStatusUpdate {
@@ -92,7 +94,7 @@ mod tests {
             .to_request();
 
         let resp = test::call_service(&app, req).await;
-        
+
         assert!(resp.status().is_success() || resp.status().is_client_error());
     }
 
@@ -101,8 +103,9 @@ mod tests {
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(DbPool::default())) // Mock pool
-                .configure(match_routes::routes)
-        ).await;
+                .configure(match_routes::routes),
+        )
+        .await;
 
         let tournament_id = Uuid::new_v4();
         let req = test::TestRequest::get()
@@ -110,7 +113,7 @@ mod tests {
             .to_request();
 
         let resp = test::call_service(&app, req).await;
-        
+
         assert!(resp.status().is_success() || resp.status().is_client_error());
     }
 
@@ -119,15 +122,16 @@ mod tests {
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(DbPool::default())) // Mock pool
-                .configure(match_routes::routes)
-        ).await;
+                .configure(match_routes::routes),
+        )
+        .await;
 
         let req = test::TestRequest::get()
             .uri("/matches/schedule")
             .to_request();
 
         let resp = test::call_service(&app, req).await;
-        
+
         assert!(resp.status().is_success() || resp.status().is_client_error());
     }
 }

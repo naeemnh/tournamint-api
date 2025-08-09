@@ -2,16 +2,16 @@ use anyhow::Result;
 use chrono::Utc;
 use sea_query::{Expr, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
+use serde_json;
 use sqlx::PgPool;
 use uuid::Uuid;
-use serde_json;
 
 use crate::models::match_model::{
-    CreateMatchRequest, Match, MatchIden, MatchStatus, UpdateMatchRequest, UpdateMatchStatusRequest,
-    MatchWithParticipants, CompleteMatchRequest, CancelMatchRequest, PostponeMatchRequest,
-    RescheduleMatchRequest, LiveMatchUpdate, MatchComment, AddMatchCommentRequest,
-    MatchSubscription, SubscribeToMatchRequest, BulkUpdateMatchesRequest,
-    BulkCancelMatchesRequest, MatchAnalytics, MatchStatistics, MatchMedia, UploadMatchMediaRequest,
+    AddMatchCommentRequest, BulkCancelMatchesRequest, BulkUpdateMatchesRequest, CancelMatchRequest,
+    CompleteMatchRequest, CreateMatchRequest, LiveMatchUpdate, Match, MatchAnalytics, MatchComment,
+    MatchIden, MatchMedia, MatchStatistics, MatchStatus, MatchSubscription, MatchWithParticipants,
+    PostponeMatchRequest, RescheduleMatchRequest, SubscribeToMatchRequest, UpdateMatchRequest,
+    UpdateMatchStatusRequest, UploadMatchMediaRequest,
 };
 
 pub struct MatchRepository {
@@ -19,10 +19,6 @@ pub struct MatchRepository {
 }
 
 impl MatchRepository {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
-    }
-
     pub async fn create(&self, request: CreateMatchRequest) -> Result<Match> {
         let mut conn = self.pool.acquire().await?;
         let id = Uuid::new_v4();
@@ -342,8 +338,11 @@ impl MatchRepository {
     }
 
     // Additional methods for the 21 missing controller methods
-    
-    pub async fn find_with_participants(&self, match_id: Uuid) -> Result<Option<MatchWithParticipants>> {
+
+    pub async fn find_with_participants(
+        &self,
+        match_id: Uuid,
+    ) -> Result<Option<MatchWithParticipants>> {
         let sql = r#"
             SELECT 
                 m.id, m.tournament_category_id,
@@ -403,7 +402,11 @@ impl MatchRepository {
         Ok(match_data)
     }
 
-    pub async fn complete_match(&self, match_id: Uuid, request: CompleteMatchRequest) -> Result<Match> {
+    pub async fn complete_match(
+        &self,
+        match_id: Uuid,
+        request: CompleteMatchRequest,
+    ) -> Result<Match> {
         let mut conn = self.pool.acquire().await?;
 
         let (sql, values) = Query::update()
@@ -429,7 +432,7 @@ impl MatchRepository {
         let mut conn = self.pool.acquire().await?;
 
         let notes = format!("Cancelled: {}", request.reason);
-        
+
         let (sql, values) = Query::update()
             .table(MatchIden::Table)
             .value(MatchIden::MatchStatus, "cancelled")
@@ -447,11 +450,15 @@ impl MatchRepository {
         Ok(match_data)
     }
 
-    pub async fn postpone_match(&self, match_id: Uuid, request: PostponeMatchRequest) -> Result<Match> {
+    pub async fn postpone_match(
+        &self,
+        match_id: Uuid,
+        request: PostponeMatchRequest,
+    ) -> Result<Match> {
         let mut conn = self.pool.acquire().await?;
 
         let notes = format!("Postponed: {}", request.reason);
-        
+
         let (sql, values) = Query::update()
             .table(MatchIden::Table)
             .value(MatchIden::MatchStatus, "postponed")
@@ -534,13 +541,17 @@ impl MatchRepository {
         Ok(matches)
     }
 
-    pub async fn reschedule_match(&self, match_id: Uuid, request: RescheduleMatchRequest) -> Result<Match> {
+    pub async fn reschedule_match(
+        &self,
+        match_id: Uuid,
+        request: RescheduleMatchRequest,
+    ) -> Result<Match> {
         let mut conn = self.pool.acquire().await?;
 
         let mut query = Query::update();
         query.table(MatchIden::Table);
         query.value(MatchIden::ScheduledDate, request.new_scheduled_date);
-        
+
         if let Some(venue) = request.new_venue {
             query.value(MatchIden::Venue, venue);
         }
@@ -550,7 +561,7 @@ impl MatchRepository {
         if let Some(reason) = request.reason {
             query.value(MatchIden::Notes, format!("Rescheduled: {}", reason));
         }
-        
+
         query.value(MatchIden::UpdatedAt, Utc::now());
         query.and_where(Expr::col(MatchIden::Id).eq(match_id));
         query.returning_all();
@@ -569,14 +580,31 @@ impl MatchRepository {
 
         let (sql, values) = Query::select()
             .columns([
-                MatchIden::Id, MatchIden::TournamentCategoryId,
-                MatchIden::Participant1TeamId, MatchIden::Participant1PlayerId, MatchIden::Participant1PartnerId,
-                MatchIden::Participant2TeamId, MatchIden::Participant2PlayerId, MatchIden::Participant2PartnerId,
-                MatchIden::MatchType, MatchIden::MatchStatus, MatchIden::RoundNumber, MatchIden::MatchNumber,
-                MatchIden::ScheduledDate, MatchIden::ActualStartDate, MatchIden::ActualEndDate,
-                MatchIden::Venue, MatchIden::CourtNumber, MatchIden::WinnerParticipant, MatchIden::IsDraw,
-                MatchIden::RefereeName, MatchIden::UmpireName, MatchIden::Notes, MatchIden::Metadata,
-                MatchIden::CreatedAt, MatchIden::UpdatedAt,
+                MatchIden::Id,
+                MatchIden::TournamentCategoryId,
+                MatchIden::Participant1TeamId,
+                MatchIden::Participant1PlayerId,
+                MatchIden::Participant1PartnerId,
+                MatchIden::Participant2TeamId,
+                MatchIden::Participant2PlayerId,
+                MatchIden::Participant2PartnerId,
+                MatchIden::MatchType,
+                MatchIden::MatchStatus,
+                MatchIden::RoundNumber,
+                MatchIden::MatchNumber,
+                MatchIden::ScheduledDate,
+                MatchIden::ActualStartDate,
+                MatchIden::ActualEndDate,
+                MatchIden::Venue,
+                MatchIden::CourtNumber,
+                MatchIden::WinnerParticipant,
+                MatchIden::IsDraw,
+                MatchIden::RefereeName,
+                MatchIden::UmpireName,
+                MatchIden::Notes,
+                MatchIden::Metadata,
+                MatchIden::CreatedAt,
+                MatchIden::UpdatedAt,
             ])
             .from(MatchIden::Table)
             .and_where(Expr::col(MatchIden::MatchStatus).eq("in_progress"))
@@ -590,7 +618,11 @@ impl MatchRepository {
         Ok(matches)
     }
 
-    pub async fn update_live_match(&self, match_id: Uuid, update: LiveMatchUpdate) -> Result<Match> {
+    pub async fn update_live_match(
+        &self,
+        match_id: Uuid,
+        update: LiveMatchUpdate,
+    ) -> Result<Match> {
         let mut conn = self.pool.acquire().await?;
 
         // Create combined metadata with live updates
@@ -607,11 +639,11 @@ impl MatchRepository {
         let mut query = Query::update();
         query.table(MatchIden::Table);
         query.value(MatchIden::Metadata, metadata);
-        
+
         if let Some(notes) = update.notes {
             query.value(MatchIden::Notes, notes);
         }
-        
+
         query.value(MatchIden::UpdatedAt, Utc::now());
         query.and_where(Expr::col(MatchIden::Id).eq(match_id));
         query.returning_all();
@@ -683,7 +715,12 @@ impl MatchRepository {
         Ok(vec![])
     }
 
-    pub async fn upload_match_media(&self, match_id: Uuid, user_id: Uuid, request: UploadMatchMediaRequest) -> Result<MatchMedia> {
+    pub async fn upload_match_media(
+        &self,
+        match_id: Uuid,
+        user_id: Uuid,
+        request: UploadMatchMediaRequest,
+    ) -> Result<MatchMedia> {
         // This would typically insert into a match_media table
         // Placeholder implementation
         let media = MatchMedia {
@@ -707,7 +744,12 @@ impl MatchRepository {
         Ok(vec![])
     }
 
-    pub async fn add_match_comment(&self, match_id: Uuid, user_id: Uuid, request: AddMatchCommentRequest) -> Result<MatchComment> {
+    pub async fn add_match_comment(
+        &self,
+        match_id: Uuid,
+        user_id: Uuid,
+        request: AddMatchCommentRequest,
+    ) -> Result<MatchComment> {
         // This would typically insert into a match_comments table
         // Placeholder implementation
         let comment = MatchComment {
@@ -722,14 +764,21 @@ impl MatchRepository {
         Ok(comment)
     }
 
-    pub async fn subscribe_to_match(&self, match_id: Uuid, user_id: Uuid, request: SubscribeToMatchRequest) -> Result<MatchSubscription> {
+    pub async fn subscribe_to_match(
+        &self,
+        match_id: Uuid,
+        user_id: Uuid,
+        request: SubscribeToMatchRequest,
+    ) -> Result<MatchSubscription> {
         // This would typically insert into a match_subscriptions table
         // Placeholder implementation
         let subscription = MatchSubscription {
             id: Uuid::new_v4(),
             match_id,
             user_id,
-            notification_preferences: request.notification_preferences.unwrap_or_else(|| serde_json::json!({"all": true})),
+            notification_preferences: request
+                .notification_preferences
+                .unwrap_or_else(|| serde_json::json!({"all": true})),
             created_at: Utc::now(),
         };
 
@@ -743,30 +792,36 @@ impl MatchRepository {
         Ok(())
     }
 
-    pub async fn bulk_update_matches(&self, request: BulkUpdateMatchesRequest) -> Result<Vec<Match>> {
+    pub async fn bulk_update_matches(
+        &self,
+        request: BulkUpdateMatchesRequest,
+    ) -> Result<Vec<Match>> {
         let mut updated_matches = Vec::new();
-        
+
         for match_id in request.match_ids {
             let updated_match = self.update(match_id, request.updates.clone()).await?;
             updated_matches.push(updated_match);
         }
-        
+
         Ok(updated_matches)
     }
 
-    pub async fn bulk_cancel_matches(&self, request: BulkCancelMatchesRequest) -> Result<Vec<Match>> {
+    pub async fn bulk_cancel_matches(
+        &self,
+        request: BulkCancelMatchesRequest,
+    ) -> Result<Vec<Match>> {
         let mut cancelled_matches = Vec::new();
-        
+
         let cancel_request = CancelMatchRequest {
             reason: request.reason.clone(),
             notify_participants: request.notify_participants,
         };
-        
+
         for match_id in request.match_ids {
             let cancelled_match = self.cancel_match(match_id, cancel_request.clone()).await?;
             cancelled_matches.push(cancelled_match);
         }
-        
+
         Ok(cancelled_matches)
     }
 }

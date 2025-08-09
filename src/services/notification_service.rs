@@ -12,6 +12,7 @@ use crate::{
 
 pub struct NotificationService;
 
+#[allow(dead_code)]
 impl NotificationService {
     pub async fn get_notifications(
         pool: &DbPool,

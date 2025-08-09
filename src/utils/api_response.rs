@@ -1,10 +1,11 @@
+use crate::formatters;
 use actix_web::HttpResponse;
 use oauth2::http::StatusCode;
 use serde::Serialize;
-use crate::formatters;
 
 pub struct ApiResponse;
 
+#[allow(dead_code)]
 impl ApiResponse {
     pub fn success<T: Serialize>(message: &str, data: Option<T>) -> HttpResponse {
         match data {
@@ -18,11 +19,7 @@ impl ApiResponse {
     }
 
     pub fn error(message: &str) -> HttpResponse {
-        formatters::error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            message,
-            "INTERNAL_ERROR",
-        )
+        formatters::error_response(StatusCode::INTERNAL_SERVER_ERROR, message, "INTERNAL_ERROR")
     }
 
     pub fn bad_request(message: &str) -> HttpResponse {
