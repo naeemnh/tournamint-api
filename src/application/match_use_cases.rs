@@ -5,7 +5,7 @@ use crate::domain::match_domain::{
     EditableMatch, EditableMatchResult, LiveMatchUpdate, Match, MatchAnalytics, MatchComment,
     MatchMedia, MatchRepository, MatchResult, MatchResultRepository, MatchScheduleItem,
     MatchScoreSummary, MatchStatistics, MatchStatus, MatchSubscription, MatchWithParticipants,
-    NewMatch, NewMatchResult,
+    NewMatch, NewMatchResult, RescheduleMatchRequest,
 };
 use crate::shared::AppError;
 
@@ -110,6 +110,14 @@ where
 
     pub async fn postpone_match(&self, match_id: Uuid) -> Result<Option<Match>, AppError> {
         self.match_repo.postpone_match(match_id).await
+    }
+
+    pub async fn reschedule_match(
+        &self,
+        match_id: Uuid,
+        request: RescheduleMatchRequest,
+    ) -> Result<Option<Match>, AppError> {
+        self.match_repo.reschedule_match(match_id, request).await
     }
 
     // ==================== User-specific ====================
@@ -275,5 +283,34 @@ where
 
     pub async fn count_match_results(&self, match_id: Uuid) -> Result<i64, AppError> {
         self.result_repo.count_by_match(match_id).await
+    }
+
+    pub async fn bulk_create_match_results(
+        &self,
+        items: Vec<NewMatchResult>,
+    ) -> Result<Vec<MatchResult>, AppError> {
+        let mut results = Vec::with_capacity(items.len());
+        for item in items {
+            let r = self.result_repo.create(item).await?;
+            results.push(r);
+        }
+        Ok(results)
+    }
+
+    pub async fn validate_match_result_scores(&self, match_id: Uuid) -> Result<bool, AppError> {
+        let results = self.result_repo.find_by_match(match_id).await?;
+        for result in results {
+            if let Some(score1) = result.participant1_score {
+                if score1 < 0 {
+                    return Ok(false);
+                }
+            }
+            if let Some(score2) = result.participant2_score {
+                if score2 < 0 {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
     }
 }

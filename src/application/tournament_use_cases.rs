@@ -1,14 +1,19 @@
 use std::sync::Arc;
 use uuid::Uuid;
 
+use chrono::Duration;
+use serde_json::Value as JsonValue;
+
 use crate::domain::tournament::{
     EditableTournament, EditableTournamentBracket, EditableTournamentCategory,
-    EditableTournamentRegistration, EditableTournamentStandings, NewTournament,
+    EditableTournamentRegistration, EditableTournamentStandings, ExportData, NewTournament,
     NewTournamentBracket, NewTournamentCategory, NewTournamentRegistration,
-    NewTournamentStandings, RegistrationWithDetails, Tournament, TournamentBracket,
+    NewTournamentStandings, RegistrationWithDetails, SportType, Tournament, TournamentBracket,
     TournamentBracketRepository, TournamentCategory, TournamentCategoryRepository,
-    TournamentRegistration, TournamentRegistrationRepository, TournamentRepository,
-    TournamentStandings, TournamentStandingsRepository, TournamentStatus,
+    TournamentDashboard, TournamentFormat, TournamentRegistration,
+    TournamentRegistrationRepository, TournamentRepository, TournamentStandings,
+    TournamentStandingsRepository, TournamentStatus, TournamentSearchQuery, TournamentStats,
+    TournamentTemplate,
 };
 use crate::shared::AppError;
 
@@ -87,6 +92,232 @@ where
 
     pub async fn delete_tournament(&self, id: Uuid) -> Result<Option<Tournament>, AppError> {
         self.tournament_repo.delete(id).await
+    }
+
+    pub async fn search_tournaments(
+        &self,
+        query: TournamentSearchQuery,
+    ) -> Result<Vec<Tournament>, AppError> {
+        self.tournament_repo.search(query).await
+    }
+
+    pub async fn get_featured_tournaments(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<Tournament>, AppError> {
+        self.tournament_repo.get_featured(limit).await
+    }
+
+    pub async fn get_upcoming_tournaments(&self) -> Result<Vec<Tournament>, AppError> {
+        self.tournament_repo.get_upcoming().await
+    }
+
+    pub async fn publish_tournament(&self, id: Uuid) -> Result<Option<Tournament>, AppError> {
+        let data = EditableTournament {
+            status: Some(TournamentStatus::RegistrationOpen),
+            ..Default::default()
+        };
+        self.tournament_repo.update(id, data).await
+    }
+
+    pub async fn start_tournament(&self, id: Uuid) -> Result<Option<Tournament>, AppError> {
+        let data = EditableTournament {
+            status: Some(TournamentStatus::InProgress),
+            ..Default::default()
+        };
+        self.tournament_repo.update(id, data).await
+    }
+
+    pub async fn complete_tournament(&self, id: Uuid) -> Result<Option<Tournament>, AppError> {
+        let data = EditableTournament {
+            status: Some(TournamentStatus::Completed),
+            ..Default::default()
+        };
+        self.tournament_repo.update(id, data).await
+    }
+
+    pub async fn cancel_tournament(
+        &self,
+        id: Uuid,
+        reason: Option<String>,
+    ) -> Result<Option<Tournament>, AppError> {
+        let mut rules = serde_json::Map::new();
+        if let Some(r) = reason {
+            rules.insert(
+                "cancellation_reason".to_string(),
+                serde_json::Value::String(r),
+            );
+        }
+        let data = EditableTournament {
+            status: Some(TournamentStatus::Cancelled),
+            rules: Some(JsonValue::Object(rules)),
+            ..Default::default()
+        };
+        self.tournament_repo.update(id, data).await
+    }
+
+    pub async fn get_tournament_stats(&self, id: Uuid) -> Result<TournamentStats, AppError> {
+        self.tournament_repo.get_tournament_stats(id).await
+    }
+
+    pub async fn get_tournament_participants(
+        &self,
+        id: Uuid,
+    ) -> Result<Vec<RegistrationWithDetails>, AppError> {
+        self.registration_repo.get_by_tournament(id).await
+    }
+
+    pub async fn export_tournament(
+        &self,
+        id: Uuid,
+        format: String,
+    ) -> Result<ExportData, AppError> {
+        let tournament = self
+            .tournament_repo
+            .get_by_id(id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+        let categories = self.category_repo.get_by_tournament(id).await?;
+        let registrations = self.registration_repo.get_by_tournament(id).await?;
+
+        let mut export_data = serde_json::Map::new();
+        export_data.insert(
+            "tournament".to_string(),
+            serde_json::to_value(&tournament).map_err(|e| AppError::InternalError(e.to_string()))?,
+        );
+        export_data.insert(
+            "categories".to_string(),
+            serde_json::to_value(&categories).map_err(|e| AppError::InternalError(e.to_string()))?,
+        );
+        export_data.insert(
+            "registrations".to_string(),
+            serde_json::to_value(&registrations).map_err(|e| AppError::InternalError(e.to_string()))?,
+        );
+        export_data.insert(
+            "exported_at".to_string(),
+            serde_json::to_value(chrono::Utc::now()).map_err(|e| AppError::InternalError(e.to_string()))?,
+        );
+
+        let (content_type, filename) = match format.as_str() {
+            "csv" => ("text/csv".to_string(), format!("{}_export.csv", tournament.name)),
+            "pdf" => ("application/pdf".to_string(), format!("{}_export.pdf", tournament.name)),
+            _ => (
+                "application/json".to_string(),
+                format!("{}_export.json", tournament.name),
+            ),
+        };
+
+        Ok(ExportData {
+            format: format.clone(),
+            data: JsonValue::Object(export_data),
+            filename,
+            content_type,
+        })
+    }
+
+    pub async fn duplicate_tournament(
+        &self,
+        id: Uuid,
+        new_name: String,
+    ) -> Result<Tournament, AppError> {
+        let original = self
+            .tournament_repo
+            .get_by_id(id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+
+        let week = Duration::days(7);
+        let new_tournament = NewTournament {
+            name: new_name,
+            description: original.description.clone(),
+            sport_type: original.sport_type,
+            format: original.format,
+            start_date: original.start_date + week,
+            end_date: original.end_date + week,
+            registration_start_date: original
+                .registration_start_date
+                .map(|d| d + week),
+            registration_end_date: original.registration_end_date.map(|d| d + week),
+            venue: original.venue.clone(),
+            max_participants: original.max_participants,
+            entry_fee: original.entry_fee,
+            prize_pool: original.prize_pool,
+            rules: original.rules.clone(),
+            organizer_id: original.organizer_id,
+        };
+        self.tournament_repo.create(new_tournament).await
+    }
+
+    pub async fn get_tournament_templates(&self) -> Result<Vec<TournamentTemplate>, AppError> {
+        Ok(vec![
+            TournamentTemplate {
+                id: "single_elimination".to_string(),
+                name: "Single Elimination".to_string(),
+                description: "Standard single elimination tournament".to_string(),
+                sport_type: SportType::Basketball,
+                format: TournamentFormat::Elimination,
+                default_settings: serde_json::json!({
+                    "bracket_type": "single",
+                    "seeding": "random",
+                    "third_place": false
+                }),
+            },
+            TournamentTemplate {
+                id: "round_robin".to_string(),
+                name: "Round Robin".to_string(),
+                description: "Everyone plays everyone tournament format".to_string(),
+                sport_type: SportType::TableTennis,
+                format: TournamentFormat::RoundRobin,
+                default_settings: serde_json::json!({
+                    "points_win": 3,
+                    "points_draw": 1,
+                    "points_loss": 0
+                }),
+            },
+        ])
+    }
+
+    pub async fn create_from_template(
+        &self,
+        _template_id: Uuid,
+        mut data: NewTournament,
+    ) -> Result<Tournament, AppError> {
+        data.format = TournamentFormat::Elimination;
+        self.tournament_repo.create(data).await
+    }
+
+    pub async fn get_tournament_dashboard(
+        &self,
+        id: Uuid,
+    ) -> Result<TournamentDashboard, AppError> {
+        let tournament = self
+            .tournament_repo
+            .get_by_id(id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+        let stats = self.tournament_repo.get_tournament_stats(id).await?;
+        let categories = self.category_repo.get_by_tournament(id).await?;
+        let all_registrations = self.registration_repo.get_by_tournament(id).await?;
+        let recent_registrations = all_registrations.into_iter().take(10).collect();
+
+        Ok(TournamentDashboard {
+            tournament,
+            stats,
+            recent_registrations,
+            categories,
+        })
+    }
+
+    pub async fn update_tournament_settings(
+        &self,
+        id: Uuid,
+        settings: JsonValue,
+    ) -> Result<Option<Tournament>, AppError> {
+        let data = EditableTournament {
+            rules: Some(settings),
+            ..Default::default()
+        };
+        self.tournament_repo.update(id, data).await
     }
 
     // ==================== Category ====================

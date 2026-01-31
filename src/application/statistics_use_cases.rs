@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use uuid::Uuid;
 
+use crate::domain::participant::PlayerRepository;
 use crate::domain::statistics::{
     AnalyticsDashboard, GameRecord, GrowthMetrics, LeaderboardEntry, PlayerStatistics,
     StatisticsFilters, StatisticsRepository, TeamStatistics, TournamentStatistics,
@@ -8,19 +9,25 @@ use crate::domain::statistics::{
 use crate::shared::AppError;
 
 /// Statistics domain use cases (read-only analytics)
-pub struct StatisticsUseCases<R>
+pub struct StatisticsUseCases<R, P>
 where
     R: StatisticsRepository,
+    P: PlayerRepository,
 {
     stats_repo: Arc<R>,
+    player_repo: Arc<P>,
 }
 
-impl<R> StatisticsUseCases<R>
+impl<R, P> StatisticsUseCases<R, P>
 where
     R: StatisticsRepository,
+    P: PlayerRepository,
 {
-    pub fn new(stats_repo: Arc<R>) -> Self {
-        Self { stats_repo }
+    pub fn new(stats_repo: Arc<R>, player_repo: Arc<P>) -> Self {
+        Self {
+            stats_repo,
+            player_repo,
+        }
     }
 
     pub async fn get_player_statistics(
@@ -104,5 +111,20 @@ where
 
     pub async fn get_analytics_dashboard(&self) -> Result<AnalyticsDashboard, AppError> {
         self.stats_repo.get_analytics_dashboard().await
+    }
+
+    /// Platform summary alias: same as get_analytics_dashboard (no separate method).
+
+    pub async fn get_my_player_statistics(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Option<PlayerStatistics>, AppError> {
+        let player = match self.player_repo.find_by_user_id(user_id).await? {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+        self.stats_repo
+            .get_player_statistics(player.id, None)
+            .await
     }
 }
