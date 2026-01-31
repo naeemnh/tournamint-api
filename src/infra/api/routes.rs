@@ -41,102 +41,102 @@ pub fn api_routes(cfg: &mut web::ServiceConfig) {
     // Player routes
     cfg.service(
         web::scope("/players")
-            .route("", web::get().to(PlayerHandler::placeholder))
-            .route("", web::post().to(PlayerHandler::placeholder))
-            .route("/{id}", web::get().to(PlayerHandler::placeholder))
-            .route("/{id}", web::post().to(PlayerHandler::placeholder))
-            .route("/{id}", web::delete().to(PlayerHandler::placeholder)),
+            .route("", web::get().to(PlayerHandler::index))
+            .route("", web::post().to(PlayerHandler::post))
+            .route("/{id}", web::get().to(PlayerHandler::show))
+            .route("/{id}", web::post().to(PlayerHandler::update))
+            .route("/{id}", web::delete().to(PlayerHandler::delete)),
     );
 
     // Team routes
     cfg.service(
         web::scope("/teams")
-            .route("", web::get().to(TeamHandler::placeholder))
-            .route("", web::post().to(TeamHandler::placeholder))
-            .route("/{id}", web::get().to(TeamHandler::placeholder))
-            .route("/{id}", web::post().to(TeamHandler::placeholder))
-            .route("/{id}", web::delete().to(TeamHandler::placeholder)),
+            .route("", web::get().to(TeamHandler::index))
+            .route("", web::post().to(TeamHandler::post))
+            .route("/{id}", web::get().to(TeamHandler::show))
+            .route("/{id}", web::post().to(TeamHandler::update))
+            .route("/{id}", web::delete().to(TeamHandler::delete)),
     );
 
     // Team member routes
     cfg.service(
         web::scope("/team_members")
-            .route("", web::post().to(TeamMemberHandler::placeholder)),
+            .route("", web::post().to(TeamMemberHandler::post)),
     );
 
     // Tournament routes
     cfg.service(
         web::scope("/tournaments")
-            .route("", web::get().to(TournamentHandler::placeholder))
-            .route("", web::post().to(TournamentHandler::placeholder))
-            .route("/{id}", web::get().to(TournamentHandler::placeholder))
-            .route("/{id}", web::put().to(TournamentHandler::placeholder))
-            .route("/{id}", web::delete().to(TournamentHandler::placeholder)),
+            .route("", web::get().to(TournamentHandler::index))
+            .route("", web::post().to(TournamentHandler::post))
+            .route("/{id}", web::get().to(TournamentHandler::show))
+            .route("/{id}", web::put().to(TournamentHandler::update))
+            .route("/{id}", web::delete().to(TournamentHandler::delete)),
     );
 
     // Tournament category routes
     cfg.service(
         web::scope("/tournament_categories")
-            .route("", web::post().to(TournamentHandler::placeholder)),
+            .route("", web::post().to(TournamentHandler::create_category)),
     );
 
     // Tournament registration routes
     cfg.service(
         web::scope("/tournament_registrations")
-            .route("", web::post().to(TournamentHandler::placeholder)),
+            .route("", web::post().to(TournamentHandler::create_registration)),
     );
 
     // Bracket routes
     cfg.service(
         web::scope("/brackets")
-            .route("/tournament/{tournament_id}", web::get().to(TournamentHandler::placeholder)),
+            .route("/tournament/{tournament_id}", web::get().to(TournamentHandler::get_brackets_by_tournament)),
     );
 
     // Standings routes
     cfg.service(
         web::scope("/standings")
-            .route("/tournament/{tournament_id}", web::get().to(TournamentHandler::placeholder)),
+            .route("/tournament/{tournament_id}", web::get().to(TournamentHandler::get_standings_by_tournament)),
     );
 
     // Match routes
     cfg.service(
         web::scope("/matches")
-            .route("", web::post().to(MatchHandler::placeholder))
-            .route("/{id}", web::get().to(MatchHandler::placeholder))
-            .route("/{id}", web::put().to(MatchHandler::placeholder))
-            .route("/{id}", web::delete().to(MatchHandler::placeholder)),
+            .route("", web::post().to(MatchHandler::post))
+            .route("/{id}", web::get().to(MatchHandler::show))
+            .route("/{id}", web::put().to(MatchHandler::update))
+            .route("/{id}", web::delete().to(MatchHandler::delete)),
     );
 
     // Match result routes
     cfg.service(
         web::scope("/match-results")
-            .route("", web::post().to(MatchResultHandler::placeholder))
-            .route("/{id}", web::get().to(MatchResultHandler::placeholder)),
+            .route("", web::post().to(MatchResultHandler::post))
+            .route("/{id}", web::get().to(MatchResultHandler::show)),
     );
 
     // Notification routes
     cfg.service(
         web::scope("/notifications")
-            .route("", web::get().to(NotificationHandler::placeholder)),
+            .route("", web::get().to(NotificationHandler::index)),
     );
 
     // Payment routes
     cfg.service(
         web::scope("/payments")
-            .route("/process", web::post().to(PaymentHandler::placeholder)),
+            .route("/process", web::post().to(PaymentHandler::process)),
     );
 
     // Statistics routes
     cfg.service(
         web::scope("/stats")
-            .route("/player/{player_id}", web::get().to(StatisticsHandler::placeholder))
-            .route("/team/{team_id}", web::get().to(StatisticsHandler::placeholder))
-            .route("/tournament/{tournament_id}", web::get().to(StatisticsHandler::placeholder)),
+            .route("/player/{player_id}", web::get().to(StatisticsHandler::get_player_stats))
+            .route("/team/{team_id}", web::get().to(StatisticsHandler::get_team_stats))
+            .route("/tournament/{tournament_id}", web::get().to(StatisticsHandler::get_tournament_stats)),
     );
 
     // Analytics routes
     cfg.service(
         web::scope("/analytics")
-            .route("/dashboard", web::get().to(AnalyticsHandler::placeholder)),
+            .route("/dashboard", web::get().to(AnalyticsHandler::dashboard)),
     );
 }

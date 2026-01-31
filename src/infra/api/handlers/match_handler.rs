@@ -1,21 +1,100 @@
-use actix_web::HttpResponse;
+use actix_web::{web, HttpResponse, ResponseError};
+use uuid::Uuid;
 
+use crate::application::MatchUseCases;
+use crate::domain::match_domain::{EditableMatch, EditableMatchResult, NewMatch, NewMatchResult};
+use crate::infra::db::{PgMatchRepository, PgMatchResultRepository};
 use crate::shared::ApiResponse;
 
-/// Match handlers - placeholder
+type MatchUseCasesData =
+    std::sync::Arc<MatchUseCases<PgMatchRepository, PgMatchResultRepository>>;
+
 pub struct MatchHandler;
 
 impl MatchHandler {
-    pub async fn placeholder() -> HttpResponse {
-        ApiResponse::error("Match handlers not implemented - migrate from controllers/match_controller.rs")
+    pub async fn post(
+        use_cases: web::Data<MatchUseCasesData>,
+        body: web::Json<NewMatch>,
+    ) -> HttpResponse {
+        match use_cases.create_match(body.into_inner()).await {
+            Ok(m) => ApiResponse::created("Created", m),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn show(
+        use_cases: web::Data<MatchUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.get_match(id).await {
+            Ok(Some(m)) => ApiResponse::success("OK", Some(m)),
+            Ok(None) => ApiResponse::not_found("Match not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn update(
+        use_cases: web::Data<MatchUseCasesData>,
+        path: web::Path<Uuid>,
+        body: web::Json<EditableMatch>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.update_match(id, body.into_inner()).await {
+            Ok(Some(m)) => ApiResponse::success("Updated", Some(m)),
+            Ok(None) => ApiResponse::not_found("Match not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn delete(
+        use_cases: web::Data<MatchUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.delete_match(id).await {
+            Ok(Some(_)) => ApiResponse::success("Deleted", Some(serde_json::json!({}))),
+            Ok(None) => ApiResponse::not_found("Match not found"),
+            Err(e) => e.error_response(),
+        }
     }
 }
 
-/// Match result handlers - placeholder
 pub struct MatchResultHandler;
 
 impl MatchResultHandler {
-    pub async fn placeholder() -> HttpResponse {
-        ApiResponse::error("Match result handlers not implemented - migrate from controllers/match_result_controller.rs")
+    pub async fn post(
+        use_cases: web::Data<MatchUseCasesData>,
+        body: web::Json<NewMatchResult>,
+    ) -> HttpResponse {
+        match use_cases.create_match_result(body.into_inner()).await {
+            Ok(r) => ApiResponse::created("Created", r),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn show(
+        use_cases: web::Data<MatchUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.get_match_result(id).await {
+            Ok(Some(r)) => ApiResponse::success("OK", Some(r)),
+            Ok(None) => ApiResponse::not_found("Match result not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn update(
+        use_cases: web::Data<MatchUseCasesData>,
+        path: web::Path<Uuid>,
+        body: web::Json<EditableMatchResult>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.update_match_result(id, body.into_inner()).await {
+            Ok(Some(r)) => ApiResponse::success("Updated", Some(r)),
+            Ok(None) => ApiResponse::not_found("Match result not found"),
+            Err(e) => e.error_response(),
+        }
     }
 }

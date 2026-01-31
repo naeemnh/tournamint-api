@@ -1,71 +1,116 @@
-use actix_web::{web, HttpRequest, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use uuid::Uuid;
 
+use crate::application::UserUseCases;
 use crate::domain::user::{EditableUser, NewUser, UpdateUserProfile};
-use crate::shared::ApiResponse;
 use crate::infra::api::middleware::auth::get_user_id_from_request;
+use crate::infra::db::{PgUserProfileRepository, PgUserRepository};
+use crate::shared::ApiResponse;
 
-/// User handlers - placeholder showing the pattern
-/// In full implementation, these would use injected use cases via app_data
+/// Concrete type for dependency injection
+type UserUseCasesData = std::sync::Arc<UserUseCases<PgUserRepository, PgUserProfileRepository>>;
+
 pub struct UserHandler;
 
 impl UserHandler {
-    pub async fn index() -> HttpResponse {
-        // TODO: Get use cases from app_data and call get_all_users
-        ApiResponse::error("Not implemented - inject use cases via app_data")
+    pub async fn index(use_cases: web::Data<UserUseCasesData>) -> HttpResponse {
+        match use_cases.find_all().await {
+            Ok(users) => ApiResponse::success("OK", Some(users)),
+            Err(e) => e.error_response(),
+        }
     }
 
-    pub async fn show(path: web::Path<Uuid>) -> HttpResponse {
-        let _user_id = path.into_inner();
-        ApiResponse::error("Not implemented - inject use cases via app_data")
+    pub async fn show(
+        use_cases: web::Data<UserUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let user_id = path.into_inner();
+        match use_cases.find_by_id(user_id).await {
+            Ok(Some(user)) => ApiResponse::success("OK", Some(user)),
+            Ok(None) => ApiResponse::not_found("User not found"),
+            Err(e) => e.error_response(),
+        }
     }
 
-    pub async fn post(_body: web::Json<NewUser>) -> HttpResponse {
-        ApiResponse::error("Not implemented - inject use cases via app_data")
+    pub async fn post(
+        use_cases: web::Data<UserUseCasesData>,
+        body: web::Json<NewUser>,
+    ) -> HttpResponse {
+        match use_cases.create(body.into_inner()).await {
+            Ok(user) => ApiResponse::created("Created", user),
+            Err(e) => e.error_response(),
+        }
     }
 
     pub async fn update(
+        use_cases: web::Data<UserUseCasesData>,
         path: web::Path<Uuid>,
-        _body: web::Json<EditableUser>,
+        body: web::Json<EditableUser>,
     ) -> HttpResponse {
-        let _user_id = path.into_inner();
-        ApiResponse::error("Not implemented - inject use cases via app_data")
+        let user_id = path.into_inner();
+        match use_cases.update(user_id, body.into_inner()).await {
+            Ok(Some(user)) => ApiResponse::success("Updated", Some(user)),
+            Ok(None) => ApiResponse::not_found("User not found"),
+            Err(e) => e.error_response(),
+        }
     }
 
-    pub async fn delete(path: web::Path<Uuid>) -> HttpResponse {
-        let _user_id = path.into_inner();
-        ApiResponse::error("Not implemented - inject use cases via app_data")
+    pub async fn delete(
+        use_cases: web::Data<UserUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let user_id = path.into_inner();
+        match use_cases.delete(user_id).await {
+            Ok(Some(_)) => ApiResponse::success("Deleted", Some(serde_json::json!({}))),
+            Ok(None) => ApiResponse::not_found("User not found"),
+            Err(e) => e.error_response(),
+        }
     }
 }
 
-/// User profile handlers
 pub struct UserProfileHandler;
 
 impl UserProfileHandler {
-    pub async fn get_current_profile(req: HttpRequest) -> HttpResponse {
-        match get_user_id_from_request(&req) {
-            Ok(_user_id) => {
-                // TODO: Get profile use cases from app_data
-                ApiResponse::error("Not implemented - inject use cases via app_data")
-            }
-            Err(response) => response,
+    pub async fn get_current_profile(
+        use_cases: web::Data<UserUseCasesData>,
+        req: HttpRequest,
+    ) -> HttpResponse {
+        let user_id = match get_user_id_from_request(&req) {
+            Ok(id) => id,
+            Err(response) => return response,
+        };
+        match use_cases.find_profile_by_user_id(user_id).await {
+            Ok(Some(profile)) => ApiResponse::success("OK", Some(profile)),
+            Ok(None) => ApiResponse::not_found("Profile not found"),
+            Err(e) => e.error_response(),
         }
     }
 
     pub async fn update_profile(
+        use_cases: web::Data<UserUseCasesData>,
         req: HttpRequest,
-        _body: web::Json<UpdateUserProfile>,
+        body: web::Json<UpdateUserProfile>,
     ) -> HttpResponse {
-        match get_user_id_from_request(&req) {
-            Ok(_user_id) => {
-                ApiResponse::error("Not implemented - inject use cases via app_data")
-            }
-            Err(response) => response,
+        let user_id = match get_user_id_from_request(&req) {
+            Ok(id) => id,
+            Err(response) => return response,
+        };
+        match use_cases.update_profile(user_id, body.into_inner()).await {
+            Ok(Some(profile)) => ApiResponse::success("Updated", Some(profile)),
+            Ok(None) => ApiResponse::not_found("Profile not found"),
+            Err(e) => e.error_response(),
         }
     }
 
-    pub async fn get_public_profile(path: web::Path<Uuid>) -> HttpResponse {
-        let _user_id = path.into_inner();
-        ApiResponse::error("Not implemented - inject use cases via app_data")
+    pub async fn get_public_profile(
+        use_cases: web::Data<UserUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let user_id = path.into_inner();
+        match use_cases.find_public_profile_by_user_id(user_id).await {
+            Ok(Some(profile)) => ApiResponse::success("OK", Some(profile)),
+            Ok(None) => ApiResponse::not_found("Profile not found"),
+            Err(e) => e.error_response(),
+        }
     }
 }
