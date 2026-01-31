@@ -1,12 +1,14 @@
-use actix_web::{web, HttpResponse, ResponseError};
+use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::application::TournamentUseCases;
 use crate::domain::tournament::{
-    EditableTournament, NewTournament, NewTournamentCategory, NewTournamentRegistration,
-    TournamentSearchQuery,
+    EditableTournament, EditableTournamentCategory, EditableTournamentRegistration,
+    NewTournament, NewTournamentCategory, NewTournamentRegistration, TournamentSearchQuery,
+    TournamentStatus,
 };
+use crate::infra::api::middleware::auth::get_user_id_from_request;
 use crate::infra::db::{
     PgTournamentBracketRepository, PgTournamentCategoryRepository,
     PgTournamentRegistrationRepository, PgTournamentRepository, PgTournamentStandingsRepository,
@@ -40,9 +42,38 @@ type TournamentUseCasesData = std::sync::Arc<
 
 pub struct TournamentHandler;
 
+#[derive(Debug, Deserialize)]
+pub struct TournamentStatusPath {
+    pub status: TournamentStatus,
+}
+
 impl TournamentHandler {
     pub async fn index(use_cases: web::Data<TournamentUseCasesData>) -> HttpResponse {
         match use_cases.get_all_tournaments().await {
+            Ok(tournaments) => ApiResponse::success("OK", Some(tournaments)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_by_status(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<TournamentStatusPath>,
+    ) -> HttpResponse {
+        match use_cases.get_tournaments_by_status(path.status).await {
+            Ok(tournaments) => ApiResponse::success("OK", Some(tournaments)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_my(
+        use_cases: web::Data<TournamentUseCasesData>,
+        req: HttpRequest,
+    ) -> HttpResponse {
+        let user_id = match get_user_id_from_request(&req) {
+            Ok(id) => id,
+            Err(response) => return response,
+        };
+        match use_cases.get_my_tournaments(user_id).await {
             Ok(tournaments) => ApiResponse::success("OK", Some(tournaments)),
             Err(e) => e.error_response(),
         }
@@ -326,6 +357,68 @@ impl TournamentCategoryHandler {
     ) -> HttpResponse {
         TournamentHandler::create_category(use_cases, body).await
     }
+
+    pub async fn get_by_id(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.get_category_by_id(id).await {
+            Ok(Some(category)) => ApiResponse::success("OK", Some(category)),
+            Ok(None) => ApiResponse::not_found("Category not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_by_tournament(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<TournamentIdPath>,
+    ) -> HttpResponse {
+        match use_cases.get_categories_by_tournament(path.tournament_id).await {
+            Ok(categories) => ApiResponse::success("OK", Some(categories)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn update(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+        body: web::Json<EditableTournamentCategory>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.update_category(id, body.into_inner()).await {
+            Ok(Some(category)) => ApiResponse::success("Updated", Some(category)),
+            Ok(None) => ApiResponse::not_found("Category not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn delete(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.delete_category(id).await {
+            Ok(Some(_)) => ApiResponse::success("Deleted", Some(serde_json::json!({}))),
+            Ok(None) => ApiResponse::not_found("Category not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CategoryIdPath {
+    pub category_id: Uuid,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PlayerIdPath {
+    pub player_id: Uuid,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TeamIdPath {
+    pub team_id: Uuid,
 }
 
 /// Tournament registration handlers
@@ -337,6 +430,83 @@ impl TournamentRegistrationHandler {
         body: web::Json<NewTournamentRegistration>,
     ) -> HttpResponse {
         TournamentHandler::create_registration(use_cases, body).await
+    }
+
+    pub async fn get_by_id(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.get_registration_by_id(id).await {
+            Ok(Some(reg)) => ApiResponse::success("OK", Some(reg)),
+            Ok(None) => ApiResponse::not_found("Registration not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn update(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+        body: web::Json<EditableTournamentRegistration>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.update_registration(id, body.into_inner()).await {
+            Ok(Some(reg)) => ApiResponse::success("Updated", Some(reg)),
+            Ok(None) => ApiResponse::not_found("Registration not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn delete(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.delete_registration(id).await {
+            Ok(Some(_)) => ApiResponse::success("Deleted", Some(serde_json::json!({}))),
+            Ok(None) => ApiResponse::not_found("Registration not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_by_category(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<CategoryIdPath>,
+    ) -> HttpResponse {
+        match use_cases.get_registrations_by_category(path.category_id).await {
+            Ok(regs) => ApiResponse::success("OK", Some(regs)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_by_tournament(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<TournamentIdPath>,
+    ) -> HttpResponse {
+        match use_cases.get_registrations_by_tournament(path.tournament_id).await {
+            Ok(regs) => ApiResponse::success("OK", Some(regs)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_by_player(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<PlayerIdPath>,
+    ) -> HttpResponse {
+        match use_cases.get_registrations_by_player(path.player_id).await {
+            Ok(regs) => ApiResponse::success("OK", Some(regs)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_by_team(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<TeamIdPath>,
+    ) -> HttpResponse {
+        match use_cases.get_registrations_by_team(path.team_id).await {
+            Ok(regs) => ApiResponse::success("OK", Some(regs)),
+            Err(e) => e.error_response(),
+        }
     }
 }
 
@@ -350,6 +520,27 @@ impl TournamentBracketHandler {
     ) -> HttpResponse {
         TournamentHandler::get_brackets_by_tournament(use_cases, path).await
     }
+
+    pub async fn get_by_category(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<CategoryIdPath>,
+    ) -> HttpResponse {
+        match use_cases.get_bracket_by_category(path.category_id).await {
+            Ok(Some(bracket)) => ApiResponse::success("OK", Some(bracket)),
+            Ok(None) => ApiResponse::not_found("Bracket not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn generate(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<TournamentIdPath>,
+    ) -> HttpResponse {
+        match use_cases.generate_bracket(path.tournament_id).await {
+            Ok(bracket) => ApiResponse::success("Generated", Some(bracket)),
+            Err(e) => e.error_response(),
+        }
+    }
 }
 
 /// Tournament standings handlers
@@ -361,5 +552,25 @@ impl TournamentStandingsHandler {
         path: web::Path<TournamentIdPath>,
     ) -> HttpResponse {
         TournamentHandler::get_standings_by_tournament(use_cases, path).await
+    }
+
+    pub async fn get_by_category(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<CategoryIdPath>,
+    ) -> HttpResponse {
+        match use_cases.get_standings_by_category(path.category_id).await {
+            Ok(standings) => ApiResponse::success("OK", Some(standings)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn update_standings(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<TournamentIdPath>,
+    ) -> HttpResponse {
+        match use_cases.recalculate_standings(path.tournament_id).await {
+            Ok(count) => ApiResponse::success("Updated", Some(serde_json::json!({ "deleted": count }))),
+            Err(e) => e.error_response(),
+        }
     }
 }

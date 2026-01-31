@@ -2,7 +2,10 @@ use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use uuid::Uuid;
 
 use crate::application::UserUseCases;
-use crate::domain::user::{EditableUser, NewUser, UpdateUserProfile};
+use crate::domain::user::{
+    EditableUser, NewUser, UpdateAvatarRequest, UpdateNotificationPreferences,
+    UpdatePrivacySettings, UpdateUserPreferences, UpdateUserProfile,
+};
 use crate::infra::api::middleware::auth::get_user_id_from_request;
 use crate::infra::db::{PgUserProfileRepository, PgUserRepository};
 use crate::shared::ApiResponse;
@@ -109,6 +112,94 @@ impl UserProfileHandler {
         let user_id = path.into_inner();
         match use_cases.find_public_profile_by_user_id(user_id).await {
             Ok(Some(profile)) => ApiResponse::success("OK", Some(profile)),
+            Ok(None) => ApiResponse::not_found("Profile not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn update_preferences(
+        use_cases: web::Data<UserUseCasesData>,
+        req: HttpRequest,
+        body: web::Json<UpdateUserPreferences>,
+    ) -> HttpResponse {
+        let user_id = match get_user_id_from_request(&req) {
+            Ok(id) => id,
+            Err(response) => return response,
+        };
+        match use_cases
+            .update_preferences(user_id, body.preferences.clone())
+            .await
+        {
+            Ok(Some(profile)) => ApiResponse::success("Updated", Some(profile)),
+            Ok(None) => ApiResponse::not_found("Profile not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn update_notification_preferences(
+        use_cases: web::Data<UserUseCasesData>,
+        req: HttpRequest,
+        body: web::Json<UpdateNotificationPreferences>,
+    ) -> HttpResponse {
+        let user_id = match get_user_id_from_request(&req) {
+            Ok(id) => id,
+            Err(response) => return response,
+        };
+        match use_cases
+            .update_notification_preferences(user_id, body.notification_preferences.clone())
+            .await
+        {
+            Ok(Some(profile)) => ApiResponse::success("Updated", Some(profile)),
+            Ok(None) => ApiResponse::not_found("Profile not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn update_privacy_settings(
+        use_cases: web::Data<UserUseCasesData>,
+        req: HttpRequest,
+        body: web::Json<UpdatePrivacySettings>,
+    ) -> HttpResponse {
+        let user_id = match get_user_id_from_request(&req) {
+            Ok(id) => id,
+            Err(response) => return response,
+        };
+        match use_cases
+            .update_privacy_settings(user_id, body.privacy_settings.clone())
+            .await
+        {
+            Ok(Some(profile)) => ApiResponse::success("Updated", Some(profile)),
+            Ok(None) => ApiResponse::not_found("Profile not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn update_avatar(
+        use_cases: web::Data<UserUseCasesData>,
+        req: HttpRequest,
+        body: web::Json<UpdateAvatarRequest>,
+    ) -> HttpResponse {
+        let user_id = match get_user_id_from_request(&req) {
+            Ok(id) => id,
+            Err(response) => return response,
+        };
+        match use_cases.update_avatar(user_id, body.avatar_url.clone()).await {
+            Ok(Some(profile)) => ApiResponse::success("Updated", Some(profile)),
+            Ok(None) => ApiResponse::not_found("Profile not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn remove_avatar(
+        use_cases: web::Data<UserUseCasesData>,
+        req: HttpRequest,
+    ) -> HttpResponse {
+        let user_id = match get_user_id_from_request(&req) {
+            Ok(id) => id,
+            Err(response) => return response,
+        };
+        match use_cases.remove_avatar(user_id).await {
+            Ok(Some(profile)) => ApiResponse::success("Updated", Some(profile)),
             Ok(None) => ApiResponse::not_found("Profile not found"),
             Err(e) => e.error_response(),
         }

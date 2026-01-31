@@ -25,6 +25,13 @@ pub struct TournamentIdPath {
     pub tournament_id: Uuid,
 }
 
+#[derive(Deserialize)]
+pub struct LeaderboardQuery {
+    pub r#type: Option<String>,
+    pub category: Option<String>,
+    pub limit: Option<i64>,
+}
+
 pub struct StatisticsHandler;
 
 impl StatisticsHandler {
@@ -93,6 +100,87 @@ impl StatisticsHandler {
             Err(e) => e.error_response(),
         }
     }
+
+    pub async fn get_leaderboard(
+        use_cases: web::Data<StatisticsUseCasesData>,
+        query: web::Query<LeaderboardQuery>,
+    ) -> HttpResponse {
+        let entity_type = query.r#type.as_deref().unwrap_or("player");
+        let category = query.category.as_deref().unwrap_or("points");
+        let limit = query.limit.unwrap_or(50).min(100).max(1);
+        match use_cases
+            .get_leaderboard(category, entity_type, limit, 0)
+            .await
+        {
+            Ok(entries) => ApiResponse::success("OK", Some(entries)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_leaderboard_players(
+        use_cases: web::Data<StatisticsUseCasesData>,
+        query: web::Query<LeaderboardLimitQuery>,
+    ) -> HttpResponse {
+        let limit = query.limit.unwrap_or(50).min(100).max(1);
+        match use_cases.get_player_leaderboard_by_points(limit).await {
+            Ok(entries) => ApiResponse::success("OK", Some(entries)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_leaderboard_players_wins(
+        use_cases: web::Data<StatisticsUseCasesData>,
+        query: web::Query<LeaderboardLimitQuery>,
+    ) -> HttpResponse {
+        let limit = query.limit.unwrap_or(50).min(100).max(1);
+        match use_cases.get_player_leaderboard_by_wins(limit).await {
+            Ok(entries) => ApiResponse::success("OK", Some(entries)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_leaderboard_players_earnings(
+        use_cases: web::Data<StatisticsUseCasesData>,
+        query: web::Query<LeaderboardLimitQuery>,
+    ) -> HttpResponse {
+        let limit = query.limit.unwrap_or(50).min(100).max(1);
+        match use_cases.get_player_leaderboard_by_earnings(limit).await {
+            Ok(entries) => ApiResponse::success("OK", Some(entries)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_leaderboard_teams(
+        use_cases: web::Data<StatisticsUseCasesData>,
+        query: web::Query<LeaderboardLimitQuery>,
+    ) -> HttpResponse {
+        let limit = query.limit.unwrap_or(50).min(100).max(1);
+        match use_cases.get_team_leaderboard(limit).await {
+            Ok(entries) => ApiResponse::success("OK", Some(entries)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_records(
+        use_cases: web::Data<StatisticsUseCasesData>,
+        query: web::Query<RecordsLimitQuery>,
+    ) -> HttpResponse {
+        let limit = query.limit.unwrap_or(50).min(100).max(1);
+        match use_cases.get_game_records(limit).await {
+            Ok(records) => ApiResponse::success("OK", Some(records)),
+            Err(e) => e.error_response(),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct LeaderboardLimitQuery {
+    pub limit: Option<i64>,
+}
+
+#[derive(Deserialize)]
+pub struct RecordsLimitQuery {
+    pub limit: Option<i64>,
 }
 
 pub struct AnalyticsHandler;
@@ -103,6 +191,15 @@ impl AnalyticsHandler {
     ) -> HttpResponse {
         match use_cases.get_analytics_dashboard().await {
             Ok(dashboard) => ApiResponse::success("OK", Some(dashboard)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn growth(
+        use_cases: web::Data<StatisticsUseCasesData>,
+    ) -> HttpResponse {
+        match use_cases.get_growth_metrics().await {
+            Ok(metrics) => ApiResponse::success("OK", Some(metrics)),
             Err(e) => e.error_response(),
         }
     }
