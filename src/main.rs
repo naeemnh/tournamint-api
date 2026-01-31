@@ -2,23 +2,11 @@ use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
 use std::sync::Arc;
 
-// ==================== NEW DDD ARCHITECTURE ====================
+// ==================== DDD ARCHITECTURE ====================
 mod application;
 mod domain;
 mod infra;
 mod shared;
-
-// ==================== LEGACY MODULES (for gradual migration) ====================
-mod config;
-mod constants;
-mod controllers;
-mod formatters;
-mod middlewares;
-mod models;
-mod repositories;
-mod routes;
-mod services;
-mod utils;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
