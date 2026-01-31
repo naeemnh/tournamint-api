@@ -93,6 +93,49 @@ pub enum BracketStatus {
     Completed,
 }
 
+// ============ Query / Response DTOs ============
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TournamentSearchQuery {
+    pub name: Option<String>,
+    pub sport_type: Option<String>,
+    pub status: Option<String>,
+    pub format: Option<String>,
+    pub location: Option<String>,
+    pub date_from: Option<String>,
+    pub date_to: Option<String>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentStats {
+    pub participants_count: i64,
+    pub registrations_count: i64,
+    pub categories_count: i64,
+    pub matches_played: i64,
+    pub prize_pool_total: String,
+    pub status: TournamentStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentTemplate {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub sport_type: SportType,
+    pub format: TournamentFormat,
+    pub default_settings: JsonValue,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportData {
+    pub format: String,
+    pub data: JsonValue,
+    pub filename: String,
+    pub content_type: String,
+}
+
 // ============ DTOs ============
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -113,7 +156,7 @@ pub struct NewTournament {
     pub organizer_id: Uuid,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EditableTournament {
     pub name: Option<String>,
     pub description: Option<String>,

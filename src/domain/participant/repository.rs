@@ -10,6 +10,7 @@ use crate::shared::AppError;
 pub trait PlayerRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<Player>, AppError>;
     async fn find_by_id(&self, player_id: Uuid) -> Result<Option<Player>, AppError>;
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Option<Player>, AppError>;
     async fn create(&self, new_player: CreatePlayer) -> Result<Player, AppError>;
     async fn update(&self, player_id: Uuid, player_data: EditablePlayer) -> Result<Option<Player>, AppError>;
     async fn delete(&self, player_id: Uuid) -> Result<Option<Player>, AppError>;

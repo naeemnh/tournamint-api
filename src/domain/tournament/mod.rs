@@ -5,8 +5,8 @@ pub mod repository;
 pub mod value_objects;
 
 pub use entity::{
-    Tournament, TournamentBracket, TournamentCategory, TournamentRegistration, TournamentStandings,
-    RegistrationWithDetails,
+    RegistrationWithDetails, Tournament, TournamentBracket, TournamentCategory,
+    TournamentDashboard, TournamentRegistration, TournamentStandings,
 };
 pub use repository::{
     TournamentBracketRepository, TournamentCategoryRepository, TournamentRegistrationRepository,
@@ -14,8 +14,9 @@ pub use repository::{
 };
 pub use value_objects::{
     BracketStatus, BracketType, EditableTournament, EditableTournamentBracket,
-    EditableTournamentCategory, EditableTournamentRegistration, EditableTournamentStandings, NewTournament, NewTournamentBracket, NewTournamentCategory,
+    EditableTournamentCategory, EditableTournamentRegistration, EditableTournamentStandings,
+    ExportData, NewTournament, NewTournamentBracket, NewTournamentCategory,
     NewTournamentRegistration, NewTournamentStandings, PaymentStatus,
-    RegistrationStatus, SportType,
-    TeamComposition, TournamentFormat, TournamentStatus,
+    RegistrationStatus, SportType, TeamComposition, TournamentFormat, TournamentSearchQuery,
+    TournamentStatus, TournamentStats, TournamentTemplate,
 };

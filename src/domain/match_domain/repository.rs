@@ -7,7 +7,7 @@ use super::entity::{
 };
 use super::value_objects::{
     EditableMatch, EditableMatchResult, LiveMatchUpdate, MatchScoreSummary, MatchStatus,
-    NewMatch, NewMatchResult,
+    NewMatch, NewMatchResult, RescheduleMatchRequest,
 };
 use crate::shared::AppError;
 
@@ -32,7 +32,8 @@ pub trait MatchRepository: Send + Sync {
     async fn complete_match(&self, match_id: Uuid, winner: i32, is_draw: bool) -> Result<Option<Match>, AppError>;
     async fn cancel_match(&self, match_id: Uuid, reason: &str) -> Result<Option<Match>, AppError>;
     async fn postpone_match(&self, match_id: Uuid) -> Result<Option<Match>, AppError>;
-    
+    async fn reschedule_match(&self, match_id: Uuid, request: RescheduleMatchRequest) -> Result<Option<Match>, AppError>;
+
     // User-specific queries
     async fn find_user_upcoming_matches(&self, user_id: Uuid) -> Result<Vec<MatchScheduleItem>, AppError>;
     async fn find_user_match_history(&self, user_id: Uuid) -> Result<Vec<MatchScheduleItem>, AppError>;

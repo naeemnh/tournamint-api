@@ -9,7 +9,7 @@ use super::value_objects::{
     BracketStatus, EditableTournament, EditableTournamentBracket, EditableTournamentCategory,
     EditableTournamentRegistration, EditableTournamentStandings, NewTournament,
     NewTournamentBracket, NewTournamentCategory, NewTournamentRegistration, NewTournamentStandings,
-    TournamentStatus,
+    TournamentSearchQuery, TournamentStatus, TournamentStats,
 };
 use crate::shared::AppError;
 
@@ -23,6 +23,10 @@ pub trait TournamentRepository: Send + Sync {
     async fn get_by_organizer(&self, organizer_id: Uuid) -> Result<Vec<Tournament>, AppError>;
     async fn update(&self, tournament_id: Uuid, tournament_data: EditableTournament) -> Result<Option<Tournament>, AppError>;
     async fn delete(&self, tournament_id: Uuid) -> Result<Option<Tournament>, AppError>;
+    async fn search(&self, query: TournamentSearchQuery) -> Result<Vec<Tournament>, AppError>;
+    async fn get_featured(&self, limit: u32) -> Result<Vec<Tournament>, AppError>;
+    async fn get_upcoming(&self) -> Result<Vec<Tournament>, AppError>;
+    async fn get_tournament_stats(&self, tournament_id: Uuid) -> Result<TournamentStats, AppError>;
 }
 
 /// Repository trait for TournamentCategory entity operations

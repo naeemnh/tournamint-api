@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use super::value_objects::{
     BracketStatus, BracketType, PaymentStatus, RegistrationStatus, SportType, TeamComposition,
-    TournamentFormat, TournamentStatus,
+    TournamentFormat, TournamentStatus, TournamentStats,
 };
 
 /// Core tournament entity
@@ -129,4 +129,13 @@ pub struct TournamentStandings {
     pub elimination_round: Option<String>,
     pub last_updated: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
+}
+
+/// Tournament dashboard aggregate (tournament + stats + recent registrations + categories)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentDashboard {
+    pub tournament: Tournament,
+    pub stats: TournamentStats,
+    pub recent_registrations: Vec<RegistrationWithDetails>,
+    pub categories: Vec<TournamentCategory>,
 }
