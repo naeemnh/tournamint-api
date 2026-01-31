@@ -10,5 +10,3 @@ pub mod notification_handler;
 pub mod statistics_handler;
 
 // Re-exports for convenience
-pub use auth_handler::AuthHandler;
-pub use user_handler::UserHandler;

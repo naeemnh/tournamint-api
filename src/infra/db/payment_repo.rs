@@ -1,8 +1,7 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use rust_decimal::Decimal;
-use sea_query::{Expr, Iden, PostgresQueryBuilder, Query};
-use sea_query_binder::SqlxBinder;
+use sea_query::Iden;
 use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 use std::fmt::Write;

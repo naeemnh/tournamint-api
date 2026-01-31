@@ -10,5 +10,4 @@ pub mod types;
 // Re-export commonly used items
 pub use api_response::ApiResponse;
 pub use config::AppConfig;
-pub use errors::{AppError, DUPLICATE_USER_EMAIL, DUPLICATE_USER_USERNAME};
-pub use types::{DateRangeQuery, LeaderboardQueryParams, PaginatedResponse, PaginationQuery, RecordsQuery};
+pub use errors::AppError;

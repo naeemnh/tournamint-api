@@ -23,7 +23,7 @@ pub use match_result_repo::PgMatchResultRepository;
 pub use notification_repo::PgNotificationRepository;
 pub use payment_repo::PgPaymentRepository;
 pub use player_repo::PgPlayerRepository;
-pub use pool::{DbConfig, DbPool};
+pub use pool::DbConfig;
 pub use statistics_repo::PgStatisticsRepository;
 pub use team_member_repo::PgTeamMemberRepository;
 pub use team_repo::PgTeamRepository;
