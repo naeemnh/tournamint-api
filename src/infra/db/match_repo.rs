@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::domain::match_domain::{
     EditableMatch, LiveMatchUpdate, Match, MatchAnalytics, MatchComment, MatchMedia,
     MatchRepository, MatchScheduleItem, MatchStatistics, MatchStatus, MatchSubscription, MatchType,
-    MatchWithParticipants, NewMatch,
+    MatchWithParticipants, NewMatch, RescheduleMatchRequest,
 };
 use crate::shared::AppError;
 
@@ -793,6 +793,38 @@ impl MatchRepository for PgMatchRepository {
             .and_where(Expr::col(MatchIden::Id).eq(match_id))
             .returning_all()
             .build_sqlx(PostgresQueryBuilder);
+
+        let row: Option<MatchRow> = sqlx::query_as_with(&sql, values)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(row.map(Match::from))
+    }
+
+    async fn reschedule_match(
+        &self,
+        match_id: Uuid,
+        request: RescheduleMatchRequest,
+    ) -> Result<Option<Match>, AppError> {
+        let mut query = Query::update();
+        query.table(MatchIden::Table);
+        query.value(MatchIden::ScheduledDate, request.new_scheduled_date);
+        query.value(MatchIden::UpdatedAt, Utc::now());
+
+        if let Some(venue) = request.new_venue {
+            query.value(MatchIden::Venue, venue);
+        }
+        if let Some(court_number) = request.new_court_number {
+            query.value(MatchIden::CourtNumber, court_number);
+        }
+        if let Some(reason) = request.reason {
+            query.value(MatchIden::Notes, format!("Rescheduled: {}", reason));
+        }
+
+        query.and_where(Expr::col(MatchIden::Id).eq(match_id));
+        query.returning_all();
+
+        let (sql, values) = query.build_sqlx(PostgresQueryBuilder);
 
         let row: Option<MatchRow> = sqlx::query_as_with(&sql, values)
             .fetch_optional(&self.pool)

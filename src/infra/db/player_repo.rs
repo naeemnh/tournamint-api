@@ -112,6 +112,26 @@ impl PlayerRepository for PgPlayerRepository {
         Ok(row.map(Player::from))
     }
 
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Option<Player>, AppError> {
+        let (sql, values) = Query::select()
+            .columns([
+                PlayerIden::Id,
+                PlayerIden::Name,
+                PlayerIden::UserId,
+                PlayerIden::CreatedAt,
+            ])
+            .from(PlayerIden::Table)
+            .and_where(Expr::col(PlayerIden::UserId).eq(user_id))
+            .limit(1)
+            .build_sqlx(PostgresQueryBuilder);
+
+        let row: Option<PlayerRow> = sqlx::query_as_with(&sql, values)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(row.map(Player::from))
+    }
+
     async fn create(&self, new_player: CreatePlayer) -> Result<Player, AppError> {
         let (sql, values) = Query::insert()
             .into_table(PlayerIden::Table)

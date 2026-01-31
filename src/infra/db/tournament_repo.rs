@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::domain::tournament::{
     BracketStatus, BracketType, EditableTournament, NewTournament, PaymentStatus,
     RegistrationStatus, SportType, TeamComposition, Tournament, TournamentFormat,
-    TournamentRepository, TournamentStatus,
+    TournamentRepository, TournamentSearchQuery, TournamentStatus, TournamentStats,
 };
 use crate::shared::AppError;
 
@@ -715,5 +715,219 @@ impl TournamentRepository for PgTournamentRepository {
             .await?;
 
         Ok(row.map(Tournament::from))
+    }
+
+    async fn search(&self, query: TournamentSearchQuery) -> Result<Vec<Tournament>, AppError> {
+        let mut conditions = Vec::new();
+        let mut bind_pos: i32 = 1;
+
+        if let Some(ref name) = query.name {
+            conditions.push(format!(" name ILIKE ${} ", bind_pos));
+            bind_pos += 1;
+        }
+        if let Some(ref st) = query.sport_type {
+            conditions.push(format!(" sport_type::text = ${} ", bind_pos));
+            bind_pos += 1;
+        }
+        if let Some(ref st) = query.status {
+            conditions.push(format!(" status::text = ${} ", bind_pos));
+            bind_pos += 1;
+        }
+        if let Some(ref location) = query.location {
+            conditions.push(format!(" venue ILIKE ${} ", bind_pos));
+            bind_pos += 1;
+        }
+        if let Some(ref date_from) = query.date_from {
+            if chrono::DateTime::parse_from_rfc3339(date_from).is_ok() {
+                conditions.push(format!(" start_date >= ${} ", bind_pos));
+                bind_pos += 1;
+            }
+        }
+        if let Some(ref date_to) = query.date_to {
+            if chrono::DateTime::parse_from_rfc3339(date_to).is_ok() {
+                conditions.push(format!(" end_date <= ${} ", bind_pos));
+                bind_pos += 1;
+            }
+        }
+
+        let where_clause = if conditions.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", conditions.join(" AND "))
+        };
+
+        let limit_clause = query
+            .limit
+            .map(|l| format!(" LIMIT {}", l.max(0).min(100)))
+            .unwrap_or_default();
+        let offset_clause = query
+            .offset
+            .map(|o| format!(" OFFSET {}", o.max(0)))
+            .unwrap_or_default();
+
+        let sql = format!(
+            "SELECT id, name, description, sport_type, format, status, start_date, end_date, \
+             registration_start_date, registration_end_date, venue, max_participants, entry_fee, \
+             prize_pool, rules, organizer_id, created_at, updated_at FROM tournaments {} \
+             ORDER BY start_date DESC {}{}",
+            where_clause, limit_clause, offset_clause
+        );
+
+        let mut q = sqlx::query_as::<_, TournamentRow>(&sql);
+        if let Some(ref name) = query.name {
+            q = q.bind(format!("%{}%", name));
+        }
+        if let Some(ref st) = query.sport_type {
+            q = q.bind(st);
+        }
+        if let Some(ref st) = query.status {
+            q = q.bind(st);
+        }
+        if let Some(ref location) = query.location {
+            q = q.bind(format!("%{}%", location));
+        }
+        if let Some(ref date_from) = query.date_from {
+            if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(date_from) {
+                q = q.bind(dt.with_timezone(&Utc));
+            }
+        }
+        if let Some(ref date_to) = query.date_to {
+            if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(date_to) {
+                q = q.bind(dt.with_timezone(&Utc));
+            }
+        }
+
+        let rows: Vec<TournamentRow> = q.fetch_all(&self.pool).await?;
+        Ok(rows.into_iter().map(Tournament::from).collect())
+    }
+
+    async fn get_featured(&self, limit: u32) -> Result<Vec<Tournament>, AppError> {
+        let draft = status_to_string(TournamentStatus::Draft);
+        let cancelled = status_to_string(TournamentStatus::Cancelled);
+        let (sql, values) = Query::select()
+            .columns([
+                TournamentIden::Id,
+                TournamentIden::Name,
+                TournamentIden::Description,
+                TournamentIden::SportType,
+                TournamentIden::Format,
+                TournamentIden::Status,
+                TournamentIden::StartDate,
+                TournamentIden::EndDate,
+                TournamentIden::RegistrationStartDate,
+                TournamentIden::RegistrationEndDate,
+                TournamentIden::Venue,
+                TournamentIden::MaxParticipants,
+                TournamentIden::EntryFee,
+                TournamentIden::PrizePool,
+                TournamentIden::Rules,
+                TournamentIden::OrganizerId,
+                TournamentIden::CreatedAt,
+                TournamentIden::UpdatedAt,
+            ])
+            .from(TournamentIden::Table)
+            .and_where(Expr::col(TournamentIden::Status).ne(draft))
+            .and_where(Expr::col(TournamentIden::Status).ne(cancelled))
+            .order_by(TournamentIden::PrizePool, sea_query::Order::Desc)
+            .order_by(TournamentIden::StartDate, sea_query::Order::Asc)
+            .limit(limit as u64)
+            .build_sqlx(PostgresQueryBuilder);
+
+        let rows: Vec<TournamentRow> = sqlx::query_as_with(&sql, values)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(rows.into_iter().map(Tournament::from).collect())
+    }
+
+    async fn get_upcoming(&self) -> Result<Vec<Tournament>, AppError> {
+        let cancelled = status_to_string(TournamentStatus::Cancelled);
+        let (sql, values) = Query::select()
+            .columns([
+                TournamentIden::Id,
+                TournamentIden::Name,
+                TournamentIden::Description,
+                TournamentIden::SportType,
+                TournamentIden::Format,
+                TournamentIden::Status,
+                TournamentIden::StartDate,
+                TournamentIden::EndDate,
+                TournamentIden::RegistrationStartDate,
+                TournamentIden::RegistrationEndDate,
+                TournamentIden::Venue,
+                TournamentIden::MaxParticipants,
+                TournamentIden::EntryFee,
+                TournamentIden::PrizePool,
+                TournamentIden::Rules,
+                TournamentIden::OrganizerId,
+                TournamentIden::CreatedAt,
+                TournamentIden::UpdatedAt,
+            ])
+            .from(TournamentIden::Table)
+            .and_where(Expr::col(TournamentIden::StartDate).gt(Utc::now()))
+            .and_where(Expr::col(TournamentIden::Status).ne(cancelled))
+            .order_by(TournamentIden::StartDate, sea_query::Order::Asc)
+            .build_sqlx(PostgresQueryBuilder);
+
+        let rows: Vec<TournamentRow> = sqlx::query_as_with(&sql, values)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(rows.into_iter().map(Tournament::from).collect())
+    }
+
+    async fn get_tournament_stats(&self, tournament_id: Uuid) -> Result<TournamentStats, AppError> {
+        let tournament = self
+            .get_by_id(tournament_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Tournament not found".into()))?;
+
+        let participants_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(DISTINCT CASE WHEN tr.team_id IS NOT NULL THEN tr.team_id ELSE tr.player_id END) \
+             FROM tournament_registrations tr INNER JOIN tournament_categories tc ON tc.id = tr.tournament_category_id \
+             WHERE tc.tournament_id = $1",
+        )
+        .bind(tournament_id)
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(0);
+
+        let registrations_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM tournament_registrations tr INNER JOIN tournament_categories tc ON tc.id = tr.tournament_category_id WHERE tc.tournament_id = $1",
+        )
+        .bind(tournament_id)
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(0);
+
+        let categories_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM tournament_categories WHERE tournament_id = $1",
+        )
+        .bind(tournament_id)
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(0);
+
+        let matches_played: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM matches m INNER JOIN tournament_categories tc ON tc.id = m.tournament_category_id WHERE tc.tournament_id = $1 AND m.match_status = 'completed'",
+        )
+        .bind(tournament_id)
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(0);
+
+        let prize_pool_total = tournament
+            .prize_pool
+            .map(|p| p.to_string())
+            .unwrap_or_else(|| "0.00".to_string());
+
+        Ok(TournamentStats {
+            participants_count,
+            registrations_count,
+            categories_count,
+            matches_played,
+            prize_pool_total,
+            status: tournament.status,
+        })
     }
 }
