@@ -84,8 +84,10 @@ async fn main() -> std::io::Result<()> {
     let payment_use_cases = Arc::new(application::PaymentUseCases::new(Arc::clone(&payment_repo)));
 
     let statistics_repo = Arc::new(infra::db::PgStatisticsRepository::new(pool.clone()));
-    let statistics_use_cases =
-        Arc::new(application::StatisticsUseCases::new(Arc::clone(&statistics_repo)));
+    let statistics_use_cases = Arc::new(application::StatisticsUseCases::new(
+        Arc::clone(&statistics_repo),
+        Arc::clone(&player_repo),
+    ));
 
     println!("Starting server at http://{}", &bind_address);
 
