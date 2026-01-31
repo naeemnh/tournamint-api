@@ -7,6 +7,5 @@ pub mod value_objects;
 pub use entity::Notification;
 pub use repository::NotificationRepository;
 pub use value_objects::{
-    MarkAllReadRequest, NewNotification, NotificationCount, NotificationType,
-    SendNotificationRequest,
+    NewNotification, NotificationType,
 };

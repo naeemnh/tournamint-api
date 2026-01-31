@@ -13,11 +13,9 @@ pub use repository::{
     TournamentRepository, TournamentStandingsRepository,
 };
 pub use value_objects::{
-    BracketGeneration, BracketMatch, BracketNode, BracketParticipant, BracketResponse,
     BracketStatus, BracketType, EditableTournament, EditableTournamentBracket,
-    EditableTournamentCategory, EditableTournamentRegistration, EditableTournamentStandings,
-    GenerateBracketRequest, NewTournament, NewTournamentBracket, NewTournamentCategory,
-    NewTournamentRegistration, NewTournamentStandings, ParticipantStats, PaymentStatus,
-    RegistrationStatus, SportType, StandingEntry, StandingsResponse, StandingsUpdateRequest,
+    EditableTournamentCategory, EditableTournamentRegistration, EditableTournamentStandings, NewTournament, NewTournamentBracket, NewTournamentCategory,
+    NewTournamentRegistration, NewTournamentStandings, PaymentStatus,
+    RegistrationStatus, SportType,
     TeamComposition, TournamentFormat, TournamentStatus,
 };

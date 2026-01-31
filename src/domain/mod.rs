@@ -9,4 +9,3 @@ pub mod tournament;
 pub mod user;
 
 // Re-export domain modules for convenient access
-pub use match_domain as matches;

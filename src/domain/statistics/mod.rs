@@ -9,4 +9,4 @@ pub use entity::{
     TeamStatistics, TournamentStatistics,
 };
 pub use repository::StatisticsRepository;
-pub use value_objects::{LeaderboardRequest, StatisticsFilters};
+pub use value_objects::StatisticsFilters;
