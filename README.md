@@ -1,49 +1,53 @@
-# Summary of Implemented APIs
+# Tournamint Backend (Server)
 
-## Existing APIs (already in the system):
+Rust/Actix-web API for the Tournamint tournament management system. The backend uses a **Domain-Driven Design (DDD)** architecture: domain → application (use cases) → infra (HTTP handlers, PostgreSQL repositories).
 
-1. Authentication - Google OAuth only
-2. Users - CRUD operations
-3. Players - CRUD operations
-4. Teams - CRUD operations
-5. Team Members - CRUD operations for team-player relationships
-6. Tournaments - CRUD operations + get by status
-7. Tournament Categories - CRUD operations + get by tournament
+## Quick start
 
-## New APIs Implemented:
+1. Copy `server/.env.example` to `server/.env` and set `DATABASE_URL`, `GOOGLE_*`, `JWT_SECRET`, etc.
+2. From `server/`: `sqlx migrate run` then `cargo run`.
+3. Server listens on `http://127.0.0.1:8080` (or `APP_URL:APP_PORT`).
 
-1. Tournament Registrations (/tournament_registrations)
+See [docs/backend-setup.md](../docs/backend-setup.md) in the project root for full setup.
 
-- POST /tournament_registrations - Register for a tournament
-- GET /tournament_registrations/{id} - Get registration by ID
-- PUT /tournament_registrations/{id} - Update registration (status, payment)
-- DELETE /tournament_registrations/{id} - Delete registration
-- GET /tournament_registrations/category/{category_id} - Get all registrations for a category
-- GET /tournament_registrations/tournament/{tournament_id} - Get all registrations for a tournament
-- GET /tournament_registrations/player/{player_id} - Get all registrations for a player
-- GET /tournament_registrations/team/{team_id} - Get all registrations for a team
+## Implemented APIs (DDD coverage)
 
-## Database Schema Added:
+All documented endpoints in [docs/backend-api-reference.md](../docs/backend-api-reference.md) are implemented via use cases and handlers:
 
-1. tournament_registrations - Handles tournament enrollment with support for teams, singles, and doubles
-2. matches - Stores match information with flexible participant support
-3. match_results - Stores detailed match scores and statistics
+| Area | Scope | Notes |
+|------|--------|--------|
+| **Auth** | `/auth/google` | Google OAuth, JWT |
+| **Users** | `/users` | CRUD |
+| **User profile** | `/profile` | Current profile, update, preferences, notifications, privacy, avatar; public profile by `user_id` |
+| **Players** | `/players` | CRUD |
+| **Teams** | `/teams` | CRUD |
+| **Team members** | `/team_members` | Add, get by team/player, update/delete (composite path) |
+| **Tournaments** | `/tournaments` | CRUD, search, status, my, featured, upcoming, templates, lifecycle, stats, export, duplicate, dashboard, settings |
+| **Tournament categories** | `/tournament_categories` | Create, get by id/tournament, update, delete |
+| **Tournament registrations** | `/tournament_registrations` | Full CRUD + by category/tournament/player/team |
+| **Brackets** | `/brackets` | By tournament/category, generate |
+| **Standings** | `/standings` | By tournament/category, update |
+| **Matches** | `/matches` | CRUD, by tournament/category, participants, status/lifecycle, schedule, my/upcoming/history, live, analytics, media, comments, subscribe, bulk |
+| **Match results** | `/match-results` | CRUD, by match (list/summary/count/set), delete all, bulk create |
+| **Notifications** | `/notifications` | List, unread, count, read-all, send, mark read, delete |
+| **Payments** | `/payments` | Process, get by id/user/tournament, refund, status, summaries |
+| **Statistics** | `/stats` | Player/team/tournament stats, leaderboards, records, summary, my-stats |
+| **Analytics** | `/analytics` | Dashboard, growth |
 
-## Still Missing (for future implementation):
+## Project layout
 
-1. Match Management APIs - Create, update, schedule matches
-2. Match Results APIs - Submit scores, update results
-3. Tournament Brackets/Standings APIs - Generate brackets, view standings
-4. User Profile APIs - Update profile, preferences
-5. Notifications APIs - Tournament updates, match reminders
-6. Payment APIs - Process registration fees
-7. Statistics/Analytics APIs - Player stats, tournament analytics
+- **`src/domain/`** — Entities, value objects, repository traits (no SQLx/Actix).
+- **`src/application/`** — Use cases (auth, user, participant, tournament, match, notification, payment, statistics).
+- **`src/infra/db/`** — PostgreSQL repository implementations (SQLx).
+- **`src/infra/api/`** — Routes and HTTP handlers; handlers call use cases.
+- **`src/shared/`** — Config, errors, API response helpers, JWT, Google OAuth.
+- **`migrations/`** — SQLx migrations.
 
-The tournament registration system is now fully functional with support for:
+## Documentation
 
-- Team registrations
-- Individual player registrations (singles)
-- Doubles registrations (with partner)
-- Registration status tracking (pending, approved, rejected, etc.)
-- Payment status tracking
-- Comprehensive querying by tournament, category, player, or team
+- **Project docs** (root `docs/`): [backend-overview.md](../docs/backend-overview.md), [backend-api-reference.md](../docs/backend-api-reference.md), [backend-setup.md](../docs/backend-setup.md), [backend-database.md](../docs/backend-database.md).
+- **Server-local**: `server/docs/API_DOCUMENTATION.md`, `server/SETUP_INSTRUCTIONS.md`.
+
+## Tests
+
+From `server/`: `cargo test`. Some tests require a database; see `server/tests/` and `server/tests/unit/`.
