@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use rust_decimal::Decimal;
-use sea_query::{Alias, Expr, Iden, PostgresQueryBuilder, Query};
+use sea_query::{Expr, Iden, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
 use serde_json::Value as JsonValue;
 use sqlx::FromRow;
@@ -185,28 +185,8 @@ impl From<PaymentSummaryRow> for PaymentSummary {
     }
 }
 
-// ==================== Select columns (with enums as text) ====================
-
-fn payment_select_columns() -> [Expr; 16] {
-    [
-        Expr::col(PaymentIden::Id),
-        Expr::col(PaymentIden::UserId),
-        Expr::col(PaymentIden::TournamentId),
-        Expr::col(PaymentIden::Amount),
-        Expr::col(PaymentIden::Currency),
-        Expr::cust("payment_method::text").alias(Alias::new("payment_method")),
-        Expr::cust("status::text").alias(Alias::new("status")),
-        Expr::col(PaymentIden::TransactionId),
-        Expr::col(PaymentIden::PaymentProvider),
-        Expr::col(PaymentIden::ProviderPaymentId),
-        Expr::col(PaymentIden::FailureReason),
-        Expr::col(PaymentIden::RefundedAmount),
-        Expr::col(PaymentIden::Metadata),
-        Expr::col(PaymentIden::CreatedAt),
-        Expr::col(PaymentIden::UpdatedAt),
-        Expr::col(PaymentIden::ProcessedAt),
-    ]
-}
+// SELECT list with enums as text for decoding into PaymentRow
+const PAYMENT_SELECT: &str = "id, user_id, tournament_id, amount, currency, payment_method::text as payment_method, status::text as status, transaction_id, payment_provider, provider_payment_id, failure_reason, refunded_amount, metadata, created_at, updated_at, processed_at";
 
 // ==================== Repository ====================
 
@@ -244,16 +224,11 @@ impl PaymentRepository for PgPaymentRepository {
     }
 
     async fn find_by_id(&self, payment_id: Uuid) -> Result<Option<Payment>, AppError> {
-        let (sql, values) = Query::select()
-            .columns(payment_select_columns())
-            .from(PaymentIden::Table)
-            .and_where(Expr::col(PaymentIden::Id).eq(payment_id))
-            .build_sqlx(PostgresQueryBuilder);
-
-        let row: Option<PaymentRow> =
-            sqlx::query_as_with(&sql, values)
-                .fetch_optional(&self.pool)
-                .await?;
+        let sql = format!("SELECT {} FROM payments WHERE id = $1", PAYMENT_SELECT);
+        let row: Option<PaymentRow> = sqlx::query_as(&sql)
+            .bind(payment_id)
+            .fetch_optional(&self.pool)
+            .await?;
         Ok(row.map(Payment::from))
     }
 
@@ -263,19 +238,16 @@ impl PaymentRepository for PgPaymentRepository {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Payment>, AppError> {
-        let (sql, values) = Query::select()
-            .columns(payment_select_columns())
-            .from(PaymentIden::Table)
-            .and_where(Expr::col(PaymentIden::UserId).eq(user_id))
-            .order_by(PaymentIden::CreatedAt, sea_query::Order::Desc)
-            .limit(limit as u64)
-            .offset(offset as u64)
-            .build_sqlx(PostgresQueryBuilder);
-
-        let rows: Vec<PaymentRow> =
-            sqlx::query_as_with(&sql, values)
-                .fetch_all(&self.pool)
-                .await?;
+        let sql = format!(
+            "SELECT {} FROM payments WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+            PAYMENT_SELECT
+        );
+        let rows: Vec<PaymentRow> = sqlx::query_as(&sql)
+            .bind(user_id)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
         Ok(rows.into_iter().map(Payment::from).collect())
     }
 
@@ -285,19 +257,16 @@ impl PaymentRepository for PgPaymentRepository {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Payment>, AppError> {
-        let (sql, values) = Query::select()
-            .columns(payment_select_columns())
-            .from(PaymentIden::Table)
-            .and_where(Expr::col(PaymentIden::TournamentId).eq(tournament_id))
-            .order_by(PaymentIden::CreatedAt, sea_query::Order::Desc)
-            .limit(limit as u64)
-            .offset(offset as u64)
-            .build_sqlx(PostgresQueryBuilder);
-
-        let rows: Vec<PaymentRow> =
-            sqlx::query_as_with(&sql, values)
-                .fetch_all(&self.pool)
-                .await?;
+        let sql = format!(
+            "SELECT {} FROM payments WHERE tournament_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+            PAYMENT_SELECT
+        );
+        let rows: Vec<PaymentRow> = sqlx::query_as(&sql)
+            .bind(tournament_id)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
         Ok(rows.into_iter().map(Payment::from).collect())
     }
 

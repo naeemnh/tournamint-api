@@ -1003,7 +1003,7 @@ impl MatchRepository for PgMatchRepository {
     }
 
     async fn get_match_media(&self, _match_id: Uuid) -> Result<Vec<MatchMedia>, AppError> {
-        // Placeholder - would need actual match_media table
+        // TODO: Placeholder - would need actual match_media table
         Ok(vec![])
     }
 
@@ -1014,7 +1014,7 @@ impl MatchRepository for PgMatchRepository {
         media_type: &str,
         file_url: &str,
     ) -> Result<MatchMedia, AppError> {
-        // Placeholder implementation
+        // TODO: Placeholder implementation
         let media = MatchMedia {
             id: Uuid::new_v4(),
             match_id,
@@ -1031,7 +1031,7 @@ impl MatchRepository for PgMatchRepository {
     }
 
     async fn get_match_comments(&self, _match_id: Uuid) -> Result<Vec<MatchComment>, AppError> {
-        // Placeholder - would need actual match_comments table
+        // TODO: Placeholder - would need actual match_comments table
         Ok(vec![])
     }
 
@@ -1041,7 +1041,7 @@ impl MatchRepository for PgMatchRepository {
         user_id: Uuid,
         comment: &str,
     ) -> Result<MatchComment, AppError> {
-        // Placeholder implementation
+        // TODO: Placeholder implementation
         let match_comment = MatchComment {
             id: Uuid::new_v4(),
             match_id,
@@ -1059,7 +1059,7 @@ impl MatchRepository for PgMatchRepository {
         match_id: Uuid,
         user_id: Uuid,
     ) -> Result<MatchSubscription, AppError> {
-        // Placeholder implementation
+        // TODO: Placeholder implementation
         let subscription = MatchSubscription {
             id: Uuid::new_v4(),
             match_id,
@@ -1076,7 +1076,7 @@ impl MatchRepository for PgMatchRepository {
         _match_id: Uuid,
         _user_id: Uuid,
     ) -> Result<(), AppError> {
-        // Placeholder implementation
+        // TODO: Placeholder implementation
         Ok(())
     }
 

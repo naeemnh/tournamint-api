@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::Utc;
-use sea_query::{Alias, Expr, Iden, PostgresQueryBuilder, Query};
+use sea_query::{Expr, Iden, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
 use sqlx::FromRow;
 use std::fmt::Write;
@@ -107,22 +107,8 @@ impl From<NotificationRow> for Notification {
     }
 }
 
-// ==================== Select columns (with enum as text) ====================
-
-fn notification_select_columns() -> [Expr; 10] {
-    [
-        Expr::col(NotificationIden::Id),
-        Expr::col(NotificationIden::UserId),
-        Expr::col(NotificationIden::Title),
-        Expr::col(NotificationIden::Message),
-        Expr::cust("notification_type::text").alias(Alias::new("notification_type")),
-        Expr::col(NotificationIden::IsRead),
-        Expr::col(NotificationIden::TournamentId),
-        Expr::col(NotificationIden::MatchId),
-        Expr::col(NotificationIden::CreatedAt),
-        Expr::col(NotificationIden::UpdatedAt),
-    ]
-}
+// SELECT list with enum as text for decoding into NotificationRow
+const NOTIFICATION_SELECT: &str = "id, user_id, title, message, notification_type::text as notification_type, is_read, tournament_id, match_id, created_at, updated_at";
 
 // ==================== Repository ====================
 
@@ -157,16 +143,14 @@ impl NotificationRepository for PgNotificationRepository {
     }
 
     async fn get_by_id(&self, notification_id: Uuid) -> Result<Option<Notification>, AppError> {
-        let (sql, values) = Query::select()
-            .columns(notification_select_columns())
-            .from(NotificationIden::Table)
-            .and_where(Expr::col(NotificationIden::Id).eq(notification_id))
-            .build_sqlx(PostgresQueryBuilder);
-
-        let row: Option<NotificationRow> =
-            sqlx::query_as_with(&sql, values)
-                .fetch_optional(&self.pool)
-                .await?;
+        let sql = format!(
+            "SELECT {} FROM notifications WHERE id = $1",
+            NOTIFICATION_SELECT
+        );
+        let row: Option<NotificationRow> = sqlx::query_as(&sql)
+            .bind(notification_id)
+            .fetch_optional(&self.pool)
+            .await?;
         Ok(row.map(Notification::from))
     }
 
@@ -176,19 +160,16 @@ impl NotificationRepository for PgNotificationRepository {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Notification>, AppError> {
-        let (sql, values) = Query::select()
-            .columns(notification_select_columns())
-            .from(NotificationIden::Table)
-            .and_where(Expr::col(NotificationIden::UserId).eq(user_id))
-            .order_by(NotificationIden::CreatedAt, sea_query::Order::Desc)
-            .limit(limit as u64)
-            .offset(offset as u64)
-            .build_sqlx(PostgresQueryBuilder);
-
-        let rows: Vec<NotificationRow> =
-            sqlx::query_as_with(&sql, values)
-                .fetch_all(&self.pool)
-                .await?;
+        let sql = format!(
+            "SELECT {} FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+            NOTIFICATION_SELECT
+        );
+        let rows: Vec<NotificationRow> = sqlx::query_as(&sql)
+            .bind(user_id)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
         Ok(rows.into_iter().map(Notification::from).collect())
     }
 
@@ -198,20 +179,16 @@ impl NotificationRepository for PgNotificationRepository {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Notification>, AppError> {
-        let (sql, values) = Query::select()
-            .columns(notification_select_columns())
-            .from(NotificationIden::Table)
-            .and_where(Expr::col(NotificationIden::UserId).eq(user_id))
-            .and_where(Expr::col(NotificationIden::IsRead).eq(false))
-            .order_by(NotificationIden::CreatedAt, sea_query::Order::Desc)
-            .limit(limit as u64)
-            .offset(offset as u64)
-            .build_sqlx(PostgresQueryBuilder);
-
-        let rows: Vec<NotificationRow> =
-            sqlx::query_as_with(&sql, values)
-                .fetch_all(&self.pool)
-                .await?;
+        let sql = format!(
+            "SELECT {} FROM notifications WHERE user_id = $1 AND is_read = false ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+            NOTIFICATION_SELECT
+        );
+        let rows: Vec<NotificationRow> = sqlx::query_as(&sql)
+            .bind(user_id)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
         Ok(rows.into_iter().map(Notification::from).collect())
     }
 
@@ -246,7 +223,7 @@ impl NotificationRepository for PgNotificationRepository {
 
     async fn delete(&self, notification_id: Uuid) -> Result<Option<Notification>, AppError> {
         let notification = self.get_by_id(notification_id).await?;
-        if let Some(ref n) = notification {
+        if notification.is_some() {
             let (sql, values) = Query::delete()
                 .from_table(NotificationIden::Table)
                 .and_where(Expr::col(NotificationIden::Id).eq(notification_id))
@@ -283,8 +260,8 @@ impl NotificationRepository for PgNotificationRepository {
         );
         query_builder.push_values(notifications, |mut b, n| {
             b.push_bind(n.user_id)
-                .push_bind(&n.title)
-                .push_bind(&n.message)
+                .push_bind(n.title.clone())
+                .push_bind(n.message.clone())
                 .push_bind(notification_type_to_db(&n.notification_type))
                 .push_bind(n.tournament_id)
                 .push_bind(n.match_id);
@@ -293,7 +270,8 @@ impl NotificationRepository for PgNotificationRepository {
             " RETURNING id, user_id, title, message, notification_type::text as notification_type, is_read, tournament_id, match_id, created_at, updated_at",
         );
 
-        let rows: Vec<NotificationRow> = query_builder.build_query_as().fetch_all(&self.pool).await?;
+        let rows: Vec<NotificationRow> =
+            query_builder.build_query_as().fetch_all(&self.pool).await?;
         Ok(rows.into_iter().map(Notification::from).collect())
     }
 }
