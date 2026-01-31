@@ -5,6 +5,7 @@ use uuid::Uuid;
 use crate::application::TournamentUseCases;
 use crate::domain::tournament::{
     EditableTournament, NewTournament, NewTournamentCategory, NewTournamentRegistration,
+    TournamentSearchQuery,
 };
 use crate::infra::db::{
     PgTournamentBracketRepository, PgTournamentCategoryRepository,
@@ -14,7 +15,17 @@ use crate::shared::ApiResponse;
 
 #[derive(Deserialize)]
 pub struct TournamentIdPath {
-    tournament_id: Uuid,
+    pub tournament_id: Uuid,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CancelTournamentBody {
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DuplicateTournamentBody {
+    pub name: String,
 }
 
 type TournamentUseCasesData = std::sync::Arc<
@@ -125,6 +136,184 @@ impl TournamentHandler {
             Err(e) => e.error_response(),
         }
     }
+
+    pub async fn search(
+        use_cases: web::Data<TournamentUseCasesData>,
+        query: web::Query<TournamentSearchQuery>,
+    ) -> HttpResponse {
+        match use_cases.search_tournaments(query.into_inner()).await {
+            Ok(tournaments) => ApiResponse::success("OK", Some(tournaments)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_featured(
+        use_cases: web::Data<TournamentUseCasesData>,
+        query: web::Query<FeaturedLimitQuery>,
+    ) -> HttpResponse {
+        let limit = query.limit.unwrap_or(10).min(100);
+        match use_cases.get_featured_tournaments(limit).await {
+            Ok(tournaments) => ApiResponse::success("OK", Some(tournaments)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_upcoming(use_cases: web::Data<TournamentUseCasesData>) -> HttpResponse {
+        match use_cases.get_upcoming_tournaments().await {
+            Ok(tournaments) => ApiResponse::success("OK", Some(tournaments)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn publish(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.publish_tournament(id).await {
+            Ok(Some(t)) => ApiResponse::success("Published", Some(t)),
+            Ok(None) => ApiResponse::not_found("Tournament not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn start(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.start_tournament(id).await {
+            Ok(Some(t)) => ApiResponse::success("Started", Some(t)),
+            Ok(None) => ApiResponse::not_found("Tournament not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn complete(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.complete_tournament(id).await {
+            Ok(Some(t)) => ApiResponse::success("Completed", Some(t)),
+            Ok(None) => ApiResponse::not_found("Tournament not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn cancel(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+        body: Option<web::Json<CancelTournamentBody>>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        let reason = body.and_then(|b| b.reason.clone());
+        match use_cases.cancel_tournament(id, reason).await {
+            Ok(Some(t)) => ApiResponse::success("Cancelled", Some(t)),
+            Ok(None) => ApiResponse::not_found("Tournament not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_stats(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.get_tournament_stats(id).await {
+            Ok(stats) => ApiResponse::success("OK", Some(stats)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_participants(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.get_tournament_participants(id).await {
+            Ok(participants) => ApiResponse::success("OK", Some(participants)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn export(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+        query: web::Query<ExportFormatQuery>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        let format = query.format.clone().unwrap_or_else(|| "json".to_string());
+        match use_cases.export_tournament(id, format).await {
+            Ok(data) => ApiResponse::success("OK", Some(data)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn duplicate(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+        body: web::Json<DuplicateTournamentBody>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.duplicate_tournament(id, body.name.clone()).await {
+            Ok(tournament) => ApiResponse::created("Duplicated", tournament),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_templates(use_cases: web::Data<TournamentUseCasesData>) -> HttpResponse {
+        match use_cases.get_tournament_templates().await {
+            Ok(templates) => ApiResponse::success("OK", Some(templates)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn create_from_template(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+        body: web::Json<NewTournament>,
+    ) -> HttpResponse {
+        let template_id = path.into_inner();
+        match use_cases.create_from_template(template_id, body.into_inner()).await {
+            Ok(tournament) => ApiResponse::created("Created from template", tournament),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_dashboard(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.get_tournament_dashboard(id).await {
+            Ok(dashboard) => ApiResponse::success("OK", Some(dashboard)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn update_settings(
+        use_cases: web::Data<TournamentUseCasesData>,
+        path: web::Path<Uuid>,
+        body: web::Json<serde_json::Value>,
+    ) -> HttpResponse {
+        let id = path.into_inner();
+        match use_cases.update_tournament_settings(id, body.into_inner()).await {
+            Ok(Some(t)) => ApiResponse::success("Settings updated", Some(t)),
+            Ok(None) => ApiResponse::not_found("Tournament not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FeaturedLimitQuery {
+    pub limit: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ExportFormatQuery {
+    pub format: Option<String>,
 }
 
 /// Tournament category handlers - delegate to TournamentHandler with use cases

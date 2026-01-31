@@ -1,12 +1,14 @@
-use actix_web::{web, HttpResponse, ResponseError};
+use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::application::StatisticsUseCases;
-use crate::infra::db::PgStatisticsRepository;
+use crate::infra::api::middleware::auth::get_user_id_from_request;
+use crate::infra::db::{PgPlayerRepository, PgStatisticsRepository};
 use crate::shared::ApiResponse;
 
-type StatisticsUseCasesData = std::sync::Arc<StatisticsUseCases<PgStatisticsRepository>>;
+type StatisticsUseCasesData =
+    std::sync::Arc<StatisticsUseCases<PgStatisticsRepository, PgPlayerRepository>>;
 
 #[derive(Deserialize)]
 pub struct PlayerIdPath {
@@ -64,6 +66,30 @@ impl StatisticsHandler {
         {
             Ok(Some(stats)) => ApiResponse::success("OK", Some(stats)),
             Ok(None) => ApiResponse::not_found("Tournament statistics not found"),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_platform_summary(
+        use_cases: web::Data<StatisticsUseCasesData>,
+    ) -> HttpResponse {
+        match use_cases.get_analytics_dashboard().await {
+            Ok(dashboard) => ApiResponse::success("OK", Some(dashboard)),
+            Err(e) => e.error_response(),
+        }
+    }
+
+    pub async fn get_my_player_statistics(
+        use_cases: web::Data<StatisticsUseCasesData>,
+        req: HttpRequest,
+    ) -> HttpResponse {
+        let user_id = match get_user_id_from_request(&req) {
+            Ok(id) => id,
+            Err(response) => return response,
+        };
+        match use_cases.get_my_player_statistics(user_id).await {
+            Ok(Some(stats)) => ApiResponse::success("OK", Some(stats)),
+            Ok(None) => ApiResponse::not_found("No player or statistics found for current user"),
             Err(e) => e.error_response(),
         }
     }

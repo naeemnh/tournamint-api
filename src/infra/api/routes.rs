@@ -64,14 +64,29 @@ pub fn api_routes(cfg: &mut web::ServiceConfig) {
             .route("", web::post().to(TeamMemberHandler::post)),
     );
 
-    // Tournament routes
+    // Tournament routes (specific paths before /{id})
     cfg.service(
         web::scope("/tournaments")
             .route("", web::get().to(TournamentHandler::index))
             .route("", web::post().to(TournamentHandler::post))
+            .route("/search", web::get().to(TournamentHandler::search))
+            .route("/featured", web::get().to(TournamentHandler::get_featured))
+            .route("/upcoming", web::get().to(TournamentHandler::get_upcoming))
+            .route("/templates", web::get().to(TournamentHandler::get_templates))
+            .route("/templates/{template_id}", web::post().to(TournamentHandler::create_from_template))
             .route("/{id}", web::get().to(TournamentHandler::show))
             .route("/{id}", web::put().to(TournamentHandler::update))
-            .route("/{id}", web::delete().to(TournamentHandler::delete)),
+            .route("/{id}", web::delete().to(TournamentHandler::delete))
+            .route("/{id}/publish", web::put().to(TournamentHandler::publish))
+            .route("/{id}/start", web::put().to(TournamentHandler::start))
+            .route("/{id}/complete", web::put().to(TournamentHandler::complete))
+            .route("/{id}/cancel", web::put().to(TournamentHandler::cancel))
+            .route("/{id}/stats", web::get().to(TournamentHandler::get_stats))
+            .route("/{id}/participants", web::get().to(TournamentHandler::get_participants))
+            .route("/{id}/export", web::get().to(TournamentHandler::export))
+            .route("/{id}/duplicate", web::post().to(TournamentHandler::duplicate))
+            .route("/{id}/dashboard", web::get().to(TournamentHandler::get_dashboard))
+            .route("/{id}/settings", web::put().to(TournamentHandler::update_settings)),
     );
 
     // Tournament category routes
@@ -104,13 +119,16 @@ pub fn api_routes(cfg: &mut web::ServiceConfig) {
             .route("", web::post().to(MatchHandler::post))
             .route("/{id}", web::get().to(MatchHandler::show))
             .route("/{id}", web::put().to(MatchHandler::update))
-            .route("/{id}", web::delete().to(MatchHandler::delete)),
+            .route("/{id}", web::delete().to(MatchHandler::delete))
+            .route("/{id}/reschedule", web::put().to(MatchHandler::reschedule))
+            .route("/{id}/results/validate", web::get().to(MatchHandler::validate_result_scores)),
     );
 
     // Match result routes
     cfg.service(
         web::scope("/match-results")
             .route("", web::post().to(MatchResultHandler::post))
+            .route("/bulk", web::post().to(MatchResultHandler::bulk_post))
             .route("/{id}", web::get().to(MatchResultHandler::show)),
     );
 
@@ -131,7 +149,9 @@ pub fn api_routes(cfg: &mut web::ServiceConfig) {
         web::scope("/stats")
             .route("/player/{player_id}", web::get().to(StatisticsHandler::get_player_stats))
             .route("/team/{team_id}", web::get().to(StatisticsHandler::get_team_stats))
-            .route("/tournament/{tournament_id}", web::get().to(StatisticsHandler::get_tournament_stats)),
+            .route("/tournament/{tournament_id}", web::get().to(StatisticsHandler::get_tournament_stats))
+            .route("/summary", web::get().to(StatisticsHandler::get_platform_summary))
+            .route("/my-stats", web::get().to(StatisticsHandler::get_my_player_statistics)),
     );
 
     // Analytics routes
