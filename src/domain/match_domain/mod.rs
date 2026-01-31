@@ -11,7 +11,7 @@ pub use entity::{
 };
 pub use repository::{MatchRepository, MatchResultRepository};
 pub use value_objects::{
-    EditableMatch,
-    EditableMatchResult, LiveMatchUpdate, MatchScoreSummary, MatchStatus, MatchType, NewMatch, NewMatchResult,
-    RescheduleMatchRequest,
+    AddMatchCommentRequest, BulkCancelMatchesRequest, CancelMatchRequest, CompleteMatchRequest,
+    EditableMatch, EditableMatchResult, LiveMatchUpdate, MatchScoreSummary, MatchStatus, MatchType,
+    NewMatch, NewMatchResult, RescheduleMatchRequest, UpdateMatchStatusRequest,
 };

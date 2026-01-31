@@ -31,6 +31,7 @@ pub trait TeamRepository: Send + Sync {
 pub trait TeamMemberRepository: Send + Sync {
     async fn create(&self, new_member: NewTeamMember) -> Result<TeamMember, AppError>;
     async fn get_by_team(&self, team_id: Uuid) -> Result<Vec<TeamPlayer>, AppError>;
+    async fn get_by_player(&self, player_id: Uuid) -> Result<Vec<TeamMember>, AppError>;
     async fn get_by_id(&self, team_id: Uuid, player_id: Uuid) -> Result<Option<TeamMember>, AppError>;
     async fn update(&self, team_id: Uuid, player_id: Uuid, member_data: EditableTeamMember) -> Result<Option<TeamMember>, AppError>;
     async fn delete(&self, team_id: Uuid, player_id: Uuid) -> Result<Option<TeamMember>, AppError>;

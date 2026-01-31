@@ -96,6 +96,13 @@ where
         self.member_repo.get_by_team(team_id).await
     }
 
+    pub async fn get_team_members_by_player(
+        &self,
+        player_id: Uuid,
+    ) -> Result<Vec<TeamMember>, AppError> {
+        self.member_repo.get_by_player(player_id).await
+    }
+
     pub async fn get_team_member(
         &self,
         team_id: Uuid,

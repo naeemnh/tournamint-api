@@ -7,5 +7,7 @@ pub mod value_objects;
 pub use entity::{PublicUserProfile, User, UserProfile, UserToken};
 pub use repository::{UserProfileRepository, UserRepository, TokenRepository};
 pub use value_objects::{
-    EditableUser, LoginResponse, NewUser, NewUserProfile, UpdateUserProfile,
+    EditableUser, LoginResponse, NewUser, NewUserProfile, UpdateAvatarRequest,
+    UpdateNotificationPreferences, UpdatePrivacySettings, UpdateUserPreferences,
+    UpdateUserProfile,
 };

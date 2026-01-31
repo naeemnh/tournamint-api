@@ -5,7 +5,7 @@ use chrono::Duration;
 use serde_json::Value as JsonValue;
 
 use crate::domain::tournament::{
-    EditableTournament, EditableTournamentBracket, EditableTournamentCategory,
+    BracketType, EditableTournament, EditableTournamentBracket, EditableTournamentCategory,
     EditableTournamentRegistration, EditableTournamentStandings, ExportData, NewTournament,
     NewTournamentBracket, NewTournamentCategory, NewTournamentRegistration,
     NewTournamentStandings, RegistrationWithDetails, SportType, Tournament, TournamentBracket,
@@ -437,6 +437,22 @@ where
         category_id: Uuid,
     ) -> Result<Option<TournamentBracket>, AppError> {
         self.bracket_repo.get_by_category_id(category_id).await
+    }
+
+    /// Generate a default bracket for a tournament (single elimination, 0 rounds).
+    pub async fn generate_bracket(
+        &self,
+        tournament_id: Uuid,
+    ) -> Result<TournamentBracket, AppError> {
+        let data = NewTournamentBracket {
+            tournament_id,
+            category_id: None,
+            bracket_type: BracketType::SingleElimination,
+            total_rounds: 0,
+            bracket_data: None,
+            settings: None,
+        };
+        self.bracket_repo.create(data).await
     }
 
     pub async fn update_bracket(

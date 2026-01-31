@@ -141,6 +141,26 @@ impl TeamMemberRepository for PgTeamMemberRepository {
         Ok(rows.into_iter().map(TeamPlayer::from).collect())
     }
 
+    async fn get_by_player(&self, player_id: Uuid) -> Result<Vec<TeamMember>, AppError> {
+        let (sql, values) = Query::select()
+            .columns([
+                TeamMemberIden::TeamId,
+                TeamMemberIden::PlayerId,
+                TeamMemberIden::IsCaptain,
+                TeamMemberIden::JerseyNumber,
+                TeamMemberIden::JoinedAt,
+            ])
+            .from(TeamMemberIden::Table)
+            .and_where(Expr::col(TeamMemberIden::PlayerId).eq(player_id))
+            .build_sqlx(PostgresQueryBuilder);
+
+        let rows: Vec<TeamMemberRow> = sqlx::query_as_with(&sql, values)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(rows.into_iter().map(TeamMember::from).collect())
+    }
+
     async fn get_by_id(
         &self,
         team_id: Uuid,
