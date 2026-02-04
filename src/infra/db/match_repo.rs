@@ -352,6 +352,81 @@ impl From<MatchStatisticsRow> for MatchStatistics {
     }
 }
 
+#[derive(Debug, FromRow)]
+struct MatchMediaRow {
+    id: Uuid,
+    match_id: Uuid,
+    media_type: String,
+    file_url: String,
+    thumbnail_url: Option<String>,
+    file_size: Option<i64>,
+    duration: Option<i32>,
+    uploaded_by: Uuid,
+    created_at: chrono::DateTime<Utc>,
+}
+
+impl From<MatchMediaRow> for MatchMedia {
+    fn from(row: MatchMediaRow) -> Self {
+        MatchMedia {
+            id: row.id,
+            match_id: row.match_id,
+            media_type: row.media_type,
+            file_url: row.file_url,
+            thumbnail_url: row.thumbnail_url,
+            file_size: row.file_size,
+            duration: row.duration,
+            uploaded_by: row.uploaded_by,
+            created_at: row.created_at,
+        }
+    }
+}
+
+#[derive(Debug, FromRow)]
+struct MatchCommentRow {
+    id: Uuid,
+    match_id: Uuid,
+    user_id: Uuid,
+    comment: String,
+    created_at: chrono::DateTime<Utc>,
+    updated_at: chrono::DateTime<Utc>,
+}
+
+impl From<MatchCommentRow> for MatchComment {
+    fn from(row: MatchCommentRow) -> Self {
+        MatchComment {
+            id: row.id,
+            match_id: row.match_id,
+            user_id: row.user_id,
+            comment: row.comment,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        }
+    }
+}
+
+#[derive(Debug, FromRow)]
+struct MatchSubscriptionRow {
+    id: Uuid,
+    match_id: Uuid,
+    user_id: Uuid,
+    notification_preferences: Option<JsonValue>,
+    created_at: chrono::DateTime<Utc>,
+}
+
+impl From<MatchSubscriptionRow> for MatchSubscription {
+    fn from(row: MatchSubscriptionRow) -> Self {
+        MatchSubscription {
+            id: row.id,
+            match_id: row.match_id,
+            user_id: row.user_id,
+            notification_preferences: row
+                .notification_preferences
+                .unwrap_or_else(|| serde_json::json!({"all": true})),
+            created_at: row.created_at,
+        }
+    }
+}
+
 // ==================== Match Repository Implementation ====================
 
 pub struct PgMatchRepository {
@@ -1020,10 +1095,20 @@ impl MatchRepository for PgMatchRepository {
     ) -> Result<Option<MatchStatistics>, AppError> {
         let sql = r#"
             SELECT 
-                $1::uuid as match_id,
-                '{"placeholder": "statistics"}'::jsonb as statistics,
-                NOW() as created_at,
-                NOW() as updated_at
+                m.id as match_id,
+                jsonb_build_object(
+                    'participant1_sets_won', COALESCE(SUM(CASE WHEN mr.participant1_score > mr.participant2_score THEN 1 ELSE 0 END), 0),
+                    'participant2_sets_won', COALESCE(SUM(CASE WHEN mr.participant2_score > mr.participant1_score THEN 1 ELSE 0 END), 0),
+                    'participant1_total_points', COALESCE(SUM(mr.participant1_score), 0),
+                    'participant2_total_points', COALESCE(SUM(mr.participant2_score), 0),
+                    'sets_played', COUNT(mr.id)
+                ) as statistics,
+                COALESCE(MIN(mr.created_at), NOW()) as created_at,
+                COALESCE(MAX(mr.updated_at), NOW()) as updated_at
+            FROM matches m
+            LEFT JOIN match_results mr ON m.id = mr.match_id
+            WHERE m.id = $1
+            GROUP BY m.id
         "#;
 
         let row: Option<MatchStatisticsRow> = sqlx::query_as(sql)
@@ -1034,9 +1119,18 @@ impl MatchRepository for PgMatchRepository {
         Ok(row.map(MatchStatistics::from))
     }
 
-    async fn get_match_media(&self, _match_id: Uuid) -> Result<Vec<MatchMedia>, AppError> {
-        // TODO: Placeholder - would need actual match_media table
-        Ok(vec![])
+    async fn get_match_media(&self, match_id: Uuid) -> Result<Vec<MatchMedia>, AppError> {
+        let sql = r#"
+            SELECT id, match_id, media_type, file_url, thumbnail_url, file_size, duration, uploaded_by, created_at
+            FROM match_media
+            WHERE match_id = $1
+            ORDER BY created_at ASC
+        "#;
+
+        let rows: Vec<MatchMediaRow> =
+            sqlx::query_as(sql).bind(match_id).fetch_all(&self.pool).await?;
+
+        Ok(rows.into_iter().map(MatchMedia::from).collect())
     }
 
     async fn upload_match_media(
@@ -1046,25 +1140,35 @@ impl MatchRepository for PgMatchRepository {
         media_type: &str,
         file_url: &str,
     ) -> Result<MatchMedia, AppError> {
-        // TODO: Placeholder implementation
-        let media = MatchMedia {
-            id: Uuid::new_v4(),
-            match_id,
-            media_type: media_type.to_string(),
-            file_url: file_url.to_string(),
-            thumbnail_url: None,
-            file_size: None,
-            duration: None,
-            uploaded_by: user_id,
-            created_at: Utc::now(),
-        };
+        let sql = r#"
+            INSERT INTO match_media (match_id, media_type, file_url, uploaded_by)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, match_id, media_type, file_url, thumbnail_url, file_size, duration, uploaded_by, created_at
+        "#;
 
-        Ok(media)
+        let row: MatchMediaRow = sqlx::query_as(sql)
+            .bind(match_id)
+            .bind(media_type)
+            .bind(file_url)
+            .bind(user_id)
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(MatchMedia::from(row))
     }
 
-    async fn get_match_comments(&self, _match_id: Uuid) -> Result<Vec<MatchComment>, AppError> {
-        // TODO: Placeholder - would need actual match_comments table
-        Ok(vec![])
+    async fn get_match_comments(&self, match_id: Uuid) -> Result<Vec<MatchComment>, AppError> {
+        let sql = r#"
+            SELECT id, match_id, user_id, comment, created_at, updated_at
+            FROM match_comments
+            WHERE match_id = $1
+            ORDER BY created_at ASC
+        "#;
+
+        let rows: Vec<MatchCommentRow> =
+            sqlx::query_as(sql).bind(match_id).fetch_all(&self.pool).await?;
+
+        Ok(rows.into_iter().map(MatchComment::from).collect())
     }
 
     async fn add_match_comment(
@@ -1073,17 +1177,20 @@ impl MatchRepository for PgMatchRepository {
         user_id: Uuid,
         comment: &str,
     ) -> Result<MatchComment, AppError> {
-        // TODO: Placeholder implementation
-        let match_comment = MatchComment {
-            id: Uuid::new_v4(),
-            match_id,
-            user_id,
-            comment: comment.to_string(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        };
+        let sql = r#"
+            INSERT INTO match_comments (match_id, user_id, comment)
+            VALUES ($1, $2, $3)
+            RETURNING id, match_id, user_id, comment, created_at, updated_at
+        "#;
 
-        Ok(match_comment)
+        let row: MatchCommentRow = sqlx::query_as(sql)
+            .bind(match_id)
+            .bind(user_id)
+            .bind(comment)
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(MatchComment::from(row))
     }
 
     async fn subscribe_to_match(
@@ -1091,24 +1198,38 @@ impl MatchRepository for PgMatchRepository {
         match_id: Uuid,
         user_id: Uuid,
     ) -> Result<MatchSubscription, AppError> {
-        // TODO: Placeholder implementation
-        let subscription = MatchSubscription {
-            id: Uuid::new_v4(),
-            match_id,
-            user_id,
-            notification_preferences: serde_json::json!({"all": true}),
-            created_at: Utc::now(),
-        };
+        let sql = r#"
+            INSERT INTO match_subscriptions (match_id, user_id, notification_preferences)
+            VALUES ($1, $2, '{"all": true}'::jsonb)
+            ON CONFLICT (match_id, user_id) DO UPDATE SET created_at = NOW()
+            RETURNING id, match_id, user_id, notification_preferences, created_at
+        "#;
 
-        Ok(subscription)
+        let row: MatchSubscriptionRow = sqlx::query_as(sql)
+            .bind(match_id)
+            .bind(user_id)
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(MatchSubscription::from(row))
     }
 
     async fn unsubscribe_from_match(
         &self,
-        _match_id: Uuid,
-        _user_id: Uuid,
+        match_id: Uuid,
+        user_id: Uuid,
     ) -> Result<(), AppError> {
-        // TODO: Placeholder implementation
+        let sql = r#"
+            DELETE FROM match_subscriptions
+            WHERE match_id = $1 AND user_id = $2
+        "#;
+
+        sqlx::query(sql)
+            .bind(match_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 
