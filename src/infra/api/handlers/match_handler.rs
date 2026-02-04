@@ -9,6 +9,7 @@ use crate::domain::match_domain::{
     RescheduleMatchRequest, UpdateMatchStatusRequest,
 };
 use crate::infra::api::middleware::auth::get_user_id_from_request;
+use crate::infra::api::sse::{Broadcaster, RealtimeEvent};
 use crate::infra::db::{PgMatchRepository, PgMatchResultRepository};
 use crate::shared::ApiResponse;
 
@@ -151,12 +152,24 @@ impl MatchHandler {
 
     pub async fn update_status(
         use_cases: web::Data<MatchUseCasesData>,
+        broadcaster: web::Data<std::sync::Arc<Broadcaster>>,
         path: web::Path<Uuid>,
         body: web::Json<UpdateMatchStatusRequest>,
     ) -> HttpResponse {
         let id = path.into_inner();
         match use_cases.update_match_status(id, body.status).await {
-            Ok(Some(m)) => ApiResponse::success("Updated", Some(m)),
+            Ok(Some(m)) => {
+                let status = format!("{:?}", m.match_status);
+                broadcaster
+                    .broadcast_event(&RealtimeEvent::MatchUpdate {
+                        match_id: m.id,
+                        tournament_id: None,
+                        category_id: Some(m.tournament_category_id),
+                        status: Some(status),
+                    })
+                    .await;
+                ApiResponse::success("Updated", Some(m))
+            }
             Ok(None) => ApiResponse::not_found("Match not found"),
             Err(e) => e.error_response(),
         }
@@ -164,11 +177,22 @@ impl MatchHandler {
 
     pub async fn start(
         use_cases: web::Data<MatchUseCasesData>,
+        broadcaster: web::Data<std::sync::Arc<Broadcaster>>,
         path: web::Path<Uuid>,
     ) -> HttpResponse {
         let id = path.into_inner();
         match use_cases.start_match(id).await {
-            Ok(Some(m)) => ApiResponse::success("Started", Some(m)),
+            Ok(Some(m)) => {
+                broadcaster
+                    .broadcast_event(&RealtimeEvent::MatchUpdate {
+                        match_id: m.id,
+                        tournament_id: None,
+                        category_id: Some(m.tournament_category_id),
+                        status: Some("InProgress".to_string()),
+                    })
+                    .await;
+                ApiResponse::success("Started", Some(m))
+            }
             Ok(None) => ApiResponse::not_found("Match not found"),
             Err(e) => e.error_response(),
         }
@@ -176,12 +200,23 @@ impl MatchHandler {
 
     pub async fn complete(
         use_cases: web::Data<MatchUseCasesData>,
+        broadcaster: web::Data<std::sync::Arc<Broadcaster>>,
         path: web::Path<Uuid>,
         body: web::Json<CompleteMatchRequest>,
     ) -> HttpResponse {
         let id = path.into_inner();
         match use_cases.complete_match(id, body.winner_participant, body.is_draw).await {
-            Ok(Some(m)) => ApiResponse::success("Completed", Some(m)),
+            Ok(Some(m)) => {
+                broadcaster
+                    .broadcast_event(&RealtimeEvent::MatchUpdate {
+                        match_id: m.id,
+                        tournament_id: None,
+                        category_id: Some(m.tournament_category_id),
+                        status: Some("Completed".to_string()),
+                    })
+                    .await;
+                ApiResponse::success("Completed", Some(m))
+            }
             Ok(None) => ApiResponse::not_found("Match not found"),
             Err(e) => e.error_response(),
         }
@@ -257,12 +292,23 @@ impl MatchHandler {
 
     pub async fn update_live(
         use_cases: web::Data<MatchUseCasesData>,
+        broadcaster: web::Data<std::sync::Arc<Broadcaster>>,
         path: web::Path<Uuid>,
         body: web::Json<LiveMatchUpdate>,
     ) -> HttpResponse {
         let id = path.into_inner();
         match use_cases.update_live_match(id, body.into_inner()).await {
-            Ok(Some(m)) => ApiResponse::success("Updated", Some(m)),
+            Ok(Some(m)) => {
+                broadcaster
+                    .broadcast_event(&RealtimeEvent::MatchUpdate {
+                        match_id: m.id,
+                        tournament_id: None,
+                        category_id: Some(m.tournament_category_id),
+                        status: Some("live_update".to_string()),
+                    })
+                    .await;
+                ApiResponse::success("Updated", Some(m))
+            }
             Ok(None) => ApiResponse::not_found("Match not found"),
             Err(e) => e.error_response(),
         }
