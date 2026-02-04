@@ -62,6 +62,10 @@ Authorization: Bearer <token>
 - **GET** `/matches/schedule`
 - **Response**: `Vec<Match>`
 
+### Validate Match Result Scores
+- **GET** `/matches/{id}/results/validate`
+- **Response**: Validation result for the match's result scores
+
 ---
 
 ## 2. Match Results APIs
