@@ -1,8 +1,8 @@
-# Tournament Repository Unit Tests
+# Tournament Unit Tests
 
 ## Overview
 
-Comprehensive unit tests for the `TournamentRepository` in `/Users/propwise1/Development/naeemnh/tournamint/server/src/repositories/tournament_repository.rs`.
+Unit tests for tournament-related logic. The legacy `tournament_repository_test` (which targeted `server::repositories::tournament_repository`) was removed during DDD migration. Repository implementations now live in `server/src/infra/db/tournament_repo.rs`; new repository tests would target that module or the domain trait.
 
 ## Test Coverage
 

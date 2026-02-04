@@ -3,6 +3,15 @@
 ## Overview
 Complete tournament management system API with comprehensive features for matches, results, brackets, standings, user profiles, notifications, payments, and statistics.
 
+## OpenAPI / Swagger
+
+Interactive API documentation is available when the server is running:
+
+- **Swagger UI**: `http://localhost:8080/swagger-ui/`
+- **OpenAPI JSON**: `http://localhost:8080/api-docs/openapi.json`
+
+Use **Authorize** in Swagger UI to add `Bearer <jwt_token>` for authenticated endpoints.
+
 ## Base URL
 ```
 http://localhost:8080
