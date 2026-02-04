@@ -2,6 +2,7 @@
 
 pub mod handlers;
 pub mod middleware;
+pub mod openapi;
 pub mod routes;
 
 pub use routes::api_routes;

@@ -59,7 +59,10 @@ where
 
         Box::pin(async move {
             // Skip auth for certain paths
-            if req.path().starts_with("/auth") {
+            if req.path().starts_with("/auth")
+                || req.path().starts_with("/swagger-ui")
+                || req.path().starts_with("/api-docs")
+            {
                 return svc.call(req).await;
             }
 

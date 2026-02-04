@@ -1,6 +1,10 @@
 use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
 use std::sync::Arc;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+
+use crate::infra::api::openapi::ApiDoc;
 
 // ==================== DDD ARCHITECTURE ====================
 mod application;
@@ -82,6 +86,10 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(infra::api::middleware::AuthMiddleware)
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-docs/openapi.json", ApiDoc::openapi()),
+            )
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(Arc::clone(&auth_use_cases)))
             .app_data(web::Data::new(Arc::clone(&user_use_cases)))
