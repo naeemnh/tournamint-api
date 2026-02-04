@@ -7,6 +7,7 @@ Rust/Actix-web API for the Tournamint tournament management system. The backend 
 1. Copy `server/.env.example` to `server/.env` and set `DATABASE_URL`, `GOOGLE_*`, `JWT_SECRET`, etc.
 2. From `server/`: `sqlx migrate run` then `cargo run`.
 3. Server listens on `http://127.0.0.1:8080` (or `APP_URL:APP_PORT`).
+4. **OpenAPI / Swagger UI**: `http://127.0.0.1:8080/swagger-ui/` for interactive API docs; `http://127.0.0.1:8080/api-docs/openapi.json` for the OpenAPI spec.
 
 See [docs/backend-setup.md](../docs/backend-setup.md) in the project root for full setup.
 
@@ -39,7 +40,7 @@ All documented endpoints in [docs/backend-api-reference.md](../docs/backend-api-
 - **`src/domain/`** — Entities, value objects, repository traits (no SQLx/Actix).
 - **`src/application/`** — Use cases (auth, user, participant, tournament, match, notification, payment, statistics).
 - **`src/infra/db/`** — PostgreSQL repository implementations (SQLx).
-- **`src/infra/api/`** — Routes and HTTP handlers; handlers call use cases.
+- **`src/infra/api/`** — Routes and HTTP handlers; handlers call use cases. OpenAPI spec and Swagger UI are in `openapi/` and `openapi.rs`.
 - **`src/shared/`** — Config, errors, API response helpers, JWT, Google OAuth.
 - **`migrations/`** — SQLx migrations.
 
@@ -47,6 +48,7 @@ All documented endpoints in [docs/backend-api-reference.md](../docs/backend-api-
 
 - **Project docs** (root `docs/`): [backend-overview.md](../docs/backend-overview.md), [backend-api-reference.md](../docs/backend-api-reference.md), [backend-setup.md](../docs/backend-setup.md), [backend-database.md](../docs/backend-database.md).
 - **Server-local**: `server/docs/API_DOCUMENTATION.md`, `server/SETUP_INSTRUCTIONS.md`.
+- **OpenAPI**: Add path stubs in `src/infra/api/openapi/paths.rs` and register them in `openapi.rs` to extend Swagger docs.
 
 ## Tests
 

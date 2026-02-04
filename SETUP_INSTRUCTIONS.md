@@ -54,7 +54,11 @@ SQLX_OFFLINE=true cargo run
 
 ## API Endpoints
 
-All API documentation is available in `/docs/API_DOCUMENTATION.md`
+- **Markdown docs**: `server/docs/API_DOCUMENTATION.md`
+- **OpenAPI / Swagger UI** (when server is running): `http://localhost:8080/swagger-ui/`
+- **OpenAPI JSON**: `http://localhost:8080/api-docs/openapi.json`
+
+Swagger UI supports JWT: use **Authorize** and enter `Bearer <your_jwt_token>` to test authenticated endpoints.
 
 ### Quick Test
 Once running, test the health of the server:
@@ -86,7 +90,7 @@ These are not actual code errors - they're database connection requirements from
 
 ## Development Notes
 
-- All new controllers use the `ApiResponse` utility in `/src/utils/api_response.rs`
+- All handlers use the `ApiResponse` utility in `src/shared/api_response.rs`
 - Authentication is handled via JWT tokens in the Authorization header
 - All endpoints except public profiles require authentication
-- The codebase follows MVC architecture with clean separation of concerns
+- The codebase follows DDD architecture (domain, application, infra) with clean separation of concerns
