@@ -1,3 +1,4 @@
+use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -10,6 +11,8 @@ use crate::domain::match_domain::{
 };
 use crate::infra::api::middleware::auth::get_user_id_from_request;
 use crate::infra::api::sse::{Broadcaster, RealtimeEvent};
+use crate::infra::api::multipart_util::extract_file_from_multipart;
+use crate::infra::cloudinary::CloudinaryClient;
 use crate::infra::db::{PgMatchRepository, PgMatchResultRepository};
 use crate::shared::ApiResponse;
 
@@ -351,16 +354,29 @@ impl MatchHandler {
 
     pub async fn upload_video(
         use_cases: web::Data<MatchUseCasesData>,
+        cloudinary: web::Data<std::sync::Arc<CloudinaryClient>>,
         req: HttpRequest,
         path: web::Path<Uuid>,
-        body: web::Json<UploadMediaBody>,
+        mut payload: Multipart,
     ) -> HttpResponse {
         let user_id = match get_user_id_from_request(&req) {
             Ok(id) => id,
             Err(response) => return response,
         };
         let id = path.into_inner();
-        match use_cases.upload_match_media(id, user_id, "video", &body.file_url).await {
+        let bytes = match extract_file_from_multipart(&mut payload, 50 * 1024 * 1024).await {
+            Ok(b) => b,
+            Err(r) => return r,
+        };
+        let public_id = format!("tournamint/matches/{}/{}", id, Uuid::new_v4());
+        let result = match cloudinary.upload(&bytes, "video", &public_id).await {
+            Ok(r) => r,
+            Err(e) => return e.error_response(),
+        };
+        match use_cases
+            .upload_match_media(id, user_id, "video", &result.secure_url)
+            .await
+        {
             Ok(media) => ApiResponse::created("Created", media),
             Err(e) => e.error_response(),
         }
@@ -368,16 +384,29 @@ impl MatchHandler {
 
     pub async fn upload_photo(
         use_cases: web::Data<MatchUseCasesData>,
+        cloudinary: web::Data<std::sync::Arc<CloudinaryClient>>,
         req: HttpRequest,
         path: web::Path<Uuid>,
-        body: web::Json<UploadMediaBody>,
+        mut payload: Multipart,
     ) -> HttpResponse {
         let user_id = match get_user_id_from_request(&req) {
             Ok(id) => id,
             Err(response) => return response,
         };
         let id = path.into_inner();
-        match use_cases.upload_match_media(id, user_id, "photo", &body.file_url).await {
+        let bytes = match extract_file_from_multipart(&mut payload, 10 * 1024 * 1024).await {
+            Ok(b) => b,
+            Err(r) => return r,
+        };
+        let public_id = format!("tournamint/matches/{}/{}", id, Uuid::new_v4());
+        let result = match cloudinary.upload(&bytes, "image", &public_id).await {
+            Ok(r) => r,
+            Err(e) => return e.error_response(),
+        };
+        match use_cases
+            .upload_match_media(id, user_id, "photo", &result.secure_url)
+            .await
+        {
             Ok(media) => ApiResponse::created("Created", media),
             Err(e) => e.error_response(),
         }
@@ -468,11 +497,6 @@ impl MatchHandler {
             Err(e) => e.error_response(),
         }
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UploadMediaBody {
-    pub file_url: String,
 }
 
 pub struct MatchResultHandler;
