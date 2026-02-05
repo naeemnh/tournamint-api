@@ -16,7 +16,7 @@ use crate::domain::tournament::{
 };
 use crate::shared::AppError;
 
-/// Tournament domain use cases
+/// Tournament domain services
 pub struct TournamentServices<T, C, R, B, S>
 where
     T: TournamentRepository,

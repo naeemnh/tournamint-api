@@ -8,7 +8,7 @@ use crate::domain::statistics::{
 };
 use crate::shared::AppError;
 
-/// Statistics domain use cases (read-only analytics)
+/// Statistics domain services (read-only analytics)
 pub struct StatisticsServices<R, P>
 where
     R: StatisticsRepository,

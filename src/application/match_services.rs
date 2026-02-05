@@ -9,7 +9,7 @@ use crate::domain::match_domain::{
 };
 use crate::shared::AppError;
 
-/// Match domain use cases
+/// Match domain services
 pub struct MatchServices<M, R>
 where
     M: MatchRepository,

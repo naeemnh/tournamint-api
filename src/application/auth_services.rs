@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::domain::user::{LoginResponse, NewUser, TokenRepository, UserRepository, UserToken};
 use crate::shared::{google, jwt, AppError};
 
-/// Auth use cases (Google OAuth login, etc.)
+/// Auth services (Google OAuth login, etc.)
 pub struct AuthServices<U, T>
 where
     U: UserRepository,

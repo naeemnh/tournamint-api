@@ -4,11 +4,11 @@
 // ==================== NEW DDD ARCHITECTURE ====================
 // Domain-Driven Design layers:
 // - domain: Core business rules (no external dependencies)
-// - application: Use cases (orchestrates domain logic)
+// - application: Services (orchestrates domain logic)
 // - infra: External implementations (DB, API)
 // - shared: Cross-cutting concerns
 
-pub mod shared;
-pub mod domain;
 pub mod application;
+pub mod domain;
 pub mod infra;
+pub mod shared;

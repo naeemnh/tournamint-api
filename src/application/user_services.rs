@@ -8,7 +8,7 @@ use crate::domain::user::{
 };
 use crate::shared::AppError;
 
-/// User and profile use cases (CRUD and profile operations)
+/// User and profile services (CRUD and profile operations)
 pub struct UserServices<U, P>
 where
     U: UserRepository,

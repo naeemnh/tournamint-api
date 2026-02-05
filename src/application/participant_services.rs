@@ -8,7 +8,7 @@ use crate::domain::participant::{
 };
 use crate::shared::AppError;
 
-/// Participant domain use cases (players and teams)
+/// Participant domain services (players and teams)
 pub struct ParticipantServices<P, T, M>
 where
     P: PlayerRepository,

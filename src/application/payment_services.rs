@@ -7,7 +7,7 @@ use crate::domain::payment::{
 };
 use crate::shared::AppError;
 
-/// Payment domain use cases
+/// Payment domain services
 pub struct PaymentServices<R>
 where
     R: PaymentRepository,

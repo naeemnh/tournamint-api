@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::domain::notification::{NewNotification, Notification, NotificationRepository};
 use crate::shared::AppError;
 
-/// Notification domain use cases
+/// Notification domain services
 pub struct NotificationServices<R>
 where
     R: NotificationRepository,

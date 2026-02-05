@@ -1,4 +1,4 @@
-// Application layer - use cases (orchestrate domain logic)
+// Application layer - services (orchestrate domain logic)
 
 pub mod auth_services;
 pub mod match_services;

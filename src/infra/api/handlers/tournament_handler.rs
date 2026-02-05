@@ -352,7 +352,7 @@ pub struct ExportFormatQuery {
     pub format: Option<String>,
 }
 
-/// Tournament category handlers - delegate to TournamentHandler with use cases
+/// Tournament category handlers - delegate to TournamentHandler with services
 pub struct TournamentCategoryHandler;
 
 impl TournamentCategoryHandler {
