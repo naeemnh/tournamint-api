@@ -1,20 +1,18 @@
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::domain::notification::{
-    NewNotification, Notification, NotificationRepository,
-};
+use crate::domain::notification::{NewNotification, Notification, NotificationRepository};
 use crate::shared::AppError;
 
 /// Notification domain use cases
-pub struct NotificationUseCases<R>
+pub struct NotificationServices<R>
 where
     R: NotificationRepository,
 {
     notification_repo: Arc<R>,
 }
 
-impl<R> NotificationUseCases<R>
+impl<R> NotificationServices<R>
 where
     R: NotificationRepository,
 {

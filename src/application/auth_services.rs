@@ -1,14 +1,12 @@
-use std::sync::Arc;
 use chrono::Utc;
 use oauth2::TokenResponse;
+use std::sync::Arc;
 
-use crate::domain::user::{
-    LoginResponse, NewUser, TokenRepository, UserRepository, UserToken,
-};
+use crate::domain::user::{LoginResponse, NewUser, TokenRepository, UserRepository, UserToken};
 use crate::shared::{google, jwt, AppError};
 
 /// Auth use cases (Google OAuth login, etc.)
-pub struct AuthUseCases<U, T>
+pub struct AuthServices<U, T>
 where
     U: UserRepository,
     T: TokenRepository,
@@ -17,7 +15,7 @@ where
     token_repo: Arc<T>,
 }
 
-impl<U, T> AuthUseCases<U, T>
+impl<U, T> AuthServices<U, T>
 where
     U: UserRepository,
     T: TokenRepository,
@@ -40,7 +38,9 @@ where
             .map_err(|e| AppError::BadRequest(format!("Token exchange failed: {}", e)))?;
 
         let access_token = token_response.access_token().secret();
-        let refresh_token = token_response.refresh_token().map(|t| t.secret().to_string());
+        let refresh_token = token_response
+            .refresh_token()
+            .map(|t| t.secret().to_string());
         let expires_in = token_response
             .expires_in()
             .map(|d| d.as_secs() as i64)
@@ -61,10 +61,7 @@ where
             .as_str()
             .ok_or_else(|| AppError::BadRequest("Missing user id from Google".to_string()))?
             .to_string();
-        let email = user_info["email"]
-            .as_str()
-            .unwrap_or("")
-            .to_string();
+        let email = user_info["email"].as_str().unwrap_or("").to_string();
         let name = user_info["name"].as_str().map(|s| s.to_string());
 
         let new_user = NewUser {
@@ -73,7 +70,11 @@ where
             name,
         };
 
-        let user = match self.user_repo.find_by_google_id(&new_user.google_id).await? {
+        let user = match self
+            .user_repo
+            .find_by_google_id(&new_user.google_id)
+            .await?
+        {
             Some(u) => u,
             None => self.user_repo.create(new_user).await?,
         };

@@ -9,7 +9,7 @@ use crate::domain::statistics::{
 use crate::shared::AppError;
 
 /// Statistics domain use cases (read-only analytics)
-pub struct StatisticsUseCases<R, P>
+pub struct StatisticsServices<R, P>
 where
     R: StatisticsRepository,
     P: PlayerRepository,
@@ -18,7 +18,7 @@ where
     player_repo: Arc<P>,
 }
 
-impl<R, P> StatisticsUseCases<R, P>
+impl<R, P> StatisticsServices<R, P>
 where
     R: StatisticsRepository,
     P: PlayerRepository,
@@ -35,7 +35,9 @@ where
         player_id: Uuid,
         filters: Option<StatisticsFilters>,
     ) -> Result<Option<PlayerStatistics>, AppError> {
-        self.stats_repo.get_player_statistics(player_id, filters).await
+        self.stats_repo
+            .get_player_statistics(player_id, filters)
+            .await
     }
 
     pub async fn get_team_statistics(
@@ -50,7 +52,9 @@ where
         &self,
         tournament_id: Uuid,
     ) -> Result<Option<TournamentStatistics>, AppError> {
-        self.stats_repo.get_tournament_statistics(tournament_id).await
+        self.stats_repo
+            .get_tournament_statistics(tournament_id)
+            .await
     }
 
     pub async fn get_leaderboard(
@@ -123,8 +127,6 @@ where
             Some(p) => p,
             None => return Ok(None),
         };
-        self.stats_repo
-            .get_player_statistics(player.id, None)
-            .await
+        self.stats_repo.get_player_statistics(player.id, None).await
     }
 }

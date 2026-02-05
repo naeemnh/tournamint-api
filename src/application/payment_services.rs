@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use rust_decimal::Decimal;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::domain::payment::{
@@ -8,14 +8,14 @@ use crate::domain::payment::{
 use crate::shared::AppError;
 
 /// Payment domain use cases
-pub struct PaymentUseCases<R>
+pub struct PaymentServices<R>
 where
     R: PaymentRepository,
 {
     payment_repo: Arc<R>,
 }
 
-impl<R> PaymentUseCases<R>
+impl<R> PaymentServices<R>
 where
     R: PaymentRepository,
 {
@@ -37,7 +37,9 @@ where
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Payment>, AppError> {
-        self.payment_repo.find_by_user_id(user_id, limit, offset).await
+        self.payment_repo
+            .find_by_user_id(user_id, limit, offset)
+            .await
     }
 
     pub async fn get_tournament_payments(
@@ -66,14 +68,16 @@ where
     ) -> Result<Option<Payment>, AppError> {
         // Get the payment to determine full amount if needed
         let payment = self.payment_repo.find_by_id(payment_id).await?;
-        
+
         match payment {
             Some(p) => {
                 let refund_amount = amount.unwrap_or(p.amount);
                 if refund_amount == p.amount {
                     self.payment_repo.refund(payment_id, refund_amount).await
                 } else {
-                    self.payment_repo.partial_refund(payment_id, refund_amount).await
+                    self.payment_repo
+                        .partial_refund(payment_id, refund_amount)
+                        .await
                 }
             }
             None => Ok(None),
@@ -84,10 +88,15 @@ where
         &self,
         tournament_id: Uuid,
     ) -> Result<PaymentSummary, AppError> {
-        self.payment_repo.get_summary_by_tournament(tournament_id).await
+        self.payment_repo
+            .get_summary_by_tournament(tournament_id)
+            .await
     }
 
-    pub async fn get_user_payment_summary(&self, user_id: Uuid) -> Result<PaymentSummary, AppError> {
+    pub async fn get_user_payment_summary(
+        &self,
+        user_id: Uuid,
+    ) -> Result<PaymentSummary, AppError> {
         self.payment_repo.get_summary_by_user(user_id).await
     }
 }

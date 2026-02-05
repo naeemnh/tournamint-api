@@ -28,11 +28,11 @@ async fn main() -> std::io::Result<()> {
     let user_repo = Arc::new(infra::db::PgUserRepository::new(pool.clone()));
     let token_repo = Arc::new(infra::db::PgTokenRepository::new(pool.clone()));
     let profile_repo = Arc::new(infra::db::PgUserProfileRepository::new(pool.clone()));
-    let auth_use_cases = Arc::new(application::AuthUseCases::new(
+    let auth_services = Arc::new(application::AuthServices::new(
         Arc::clone(&user_repo),
         Arc::clone(&token_repo),
     ));
-    let user_use_cases = Arc::new(application::UserUseCases::new(
+    let user_services = Arc::new(application::UserServices::new(
         Arc::clone(&user_repo),
         Arc::clone(&profile_repo),
     ));
@@ -40,7 +40,7 @@ async fn main() -> std::io::Result<()> {
     let player_repo = Arc::new(infra::db::PgPlayerRepository::new(pool.clone()));
     let team_repo = Arc::new(infra::db::PgTeamRepository::new(pool.clone()));
     let team_member_repo = Arc::new(infra::db::PgTeamMemberRepository::new(pool.clone()));
-    let participant_use_cases = Arc::new(application::ParticipantUseCases::new(
+    let participant_services = Arc::new(application::ParticipantServices::new(
         Arc::clone(&player_repo),
         Arc::clone(&team_repo),
         Arc::clone(&team_member_repo),
@@ -49,13 +49,15 @@ async fn main() -> std::io::Result<()> {
     let tournament_repo = Arc::new(infra::db::PgTournamentRepository::new(pool.clone()));
     let tournament_category_repo =
         Arc::new(infra::db::PgTournamentCategoryRepository::new(pool.clone()));
-    let tournament_registration_repo =
-        Arc::new(infra::db::PgTournamentRegistrationRepository::new(pool.clone()));
+    let tournament_registration_repo = Arc::new(
+        infra::db::PgTournamentRegistrationRepository::new(pool.clone()),
+    );
     let tournament_bracket_repo =
         Arc::new(infra::db::PgTournamentBracketRepository::new(pool.clone()));
-    let tournament_standings_repo =
-        Arc::new(infra::db::PgTournamentStandingsRepository::new(pool.clone()));
-    let tournament_use_cases = Arc::new(application::TournamentUseCases::new(
+    let tournament_standings_repo = Arc::new(infra::db::PgTournamentStandingsRepository::new(
+        pool.clone(),
+    ));
+    let tournament_services = Arc::new(application::TournamentServices::new(
         Arc::clone(&tournament_repo),
         Arc::clone(&tournament_category_repo),
         Arc::clone(&tournament_registration_repo),
@@ -65,27 +67,29 @@ async fn main() -> std::io::Result<()> {
 
     let match_repo = Arc::new(infra::db::PgMatchRepository::new(pool.clone()));
     let match_result_repo = Arc::new(infra::db::PgMatchResultRepository::new(pool.clone()));
-    let match_use_cases = Arc::new(application::MatchUseCases::new(
+    let match_services = Arc::new(application::MatchServices::new(
         Arc::clone(&match_repo),
         Arc::clone(&match_result_repo),
     ));
 
     let notification_repo = Arc::new(infra::db::PgNotificationRepository::new(pool.clone()));
-    let notification_use_cases =
-        Arc::new(application::NotificationUseCases::new(Arc::clone(&notification_repo)));
+    let notification_services = Arc::new(application::NotificationServices::new(Arc::clone(
+        &notification_repo,
+    )));
 
     let payment_repo = Arc::new(infra::db::PgPaymentRepository::new(pool.clone()));
-    let payment_use_cases = Arc::new(application::PaymentUseCases::new(Arc::clone(&payment_repo)));
+    let payment_services = Arc::new(application::PaymentServices::new(Arc::clone(&payment_repo)));
 
     let statistics_repo = Arc::new(infra::db::PgStatisticsRepository::new(pool.clone()));
-    let statistics_use_cases = Arc::new(application::StatisticsUseCases::new(
+    let statistics_services = Arc::new(application::StatisticsServices::new(
         Arc::clone(&statistics_repo),
         Arc::clone(&player_repo),
     ));
 
     let broadcaster = Broadcaster::create();
 
-    let cloudinary_config = CloudinaryConfig::from_env().expect("CLOUDINARY_URL must be set and valid");
+    let cloudinary_config =
+        CloudinaryConfig::from_env().expect("CLOUDINARY_URL must be set and valid");
     let cloudinary_client = std::sync::Arc::new(CloudinaryClient::new(cloudinary_config));
 
     println!("Starting server at http://{}", &bind_address);
@@ -100,14 +104,14 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(Arc::clone(&broadcaster)))
             .app_data(web::Data::new(Arc::clone(&cloudinary_client)))
             .app_data(web::Data::new(pool.clone()))
-            .app_data(web::Data::new(Arc::clone(&auth_use_cases)))
-            .app_data(web::Data::new(Arc::clone(&user_use_cases)))
-            .app_data(web::Data::new(Arc::clone(&participant_use_cases)))
-            .app_data(web::Data::new(Arc::clone(&tournament_use_cases)))
-            .app_data(web::Data::new(Arc::clone(&match_use_cases)))
-            .app_data(web::Data::new(Arc::clone(&notification_use_cases)))
-            .app_data(web::Data::new(Arc::clone(&payment_use_cases)))
-            .app_data(web::Data::new(Arc::clone(&statistics_use_cases)))
+            .app_data(web::Data::new(Arc::clone(&auth_services)))
+            .app_data(web::Data::new(Arc::clone(&user_services)))
+            .app_data(web::Data::new(Arc::clone(&participant_services)))
+            .app_data(web::Data::new(Arc::clone(&tournament_services)))
+            .app_data(web::Data::new(Arc::clone(&match_services)))
+            .app_data(web::Data::new(Arc::clone(&notification_services)))
+            .app_data(web::Data::new(Arc::clone(&payment_services)))
+            .app_data(web::Data::new(Arc::clone(&statistics_services)))
             .configure(infra::api::api_routes)
     })
     .bind(&bind_address)?

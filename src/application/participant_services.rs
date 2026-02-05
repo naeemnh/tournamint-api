@@ -2,14 +2,14 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::domain::participant::{
-    CreatePlayer, EditablePlayer, EditableTeam, EditableTeamMember, NewTeam, NewTeamMember,
-    Player, PlayerRepository, Team, TeamMember, TeamMemberRepository, TeamPlayer, TeamRepository,
+    CreatePlayer, EditablePlayer, EditableTeam, EditableTeamMember, NewTeam, NewTeamMember, Player,
+    PlayerRepository, Team, TeamMember, TeamMemberRepository, TeamPlayer, TeamRepository,
     TeamWithMembers,
 };
 use crate::shared::AppError;
 
 /// Participant domain use cases (players and teams)
-pub struct ParticipantUseCases<P, T, M>
+pub struct ParticipantServices<P, T, M>
 where
     P: PlayerRepository,
     T: TeamRepository,
@@ -20,7 +20,7 @@ where
     member_repo: Arc<M>,
 }
 
-impl<P, T, M> ParticipantUseCases<P, T, M>
+impl<P, T, M> ParticipantServices<P, T, M>
 where
     P: PlayerRepository,
     T: TeamRepository,
