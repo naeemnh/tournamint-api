@@ -32,7 +32,10 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_REDIRECT_URL=http://localhost:8080/auth/google/callback
 JWT_SECRET=your_jwt_secret_key
+CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
 ```
+
+Media uploads (match photos/videos, profile avatars) require Cloudinary. Get credentials from [Cloudinary Console](https://console.cloudinary.com/).
 
 ### 3. Build and Run
 
