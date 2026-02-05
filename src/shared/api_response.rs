@@ -74,4 +74,12 @@ impl ApiResponse {
     pub fn conflict(message: &str) -> HttpResponse {
         error_response(StatusCode::CONFLICT, message, "CONFLICT")
     }
+
+    pub fn payload_too_large(message: &str) -> HttpResponse {
+        error_response(
+            StatusCode::from_u16(413).unwrap_or(StatusCode::BAD_REQUEST),
+            message,
+            "PAYLOAD_TOO_LARGE",
+        )
+    }
 }
