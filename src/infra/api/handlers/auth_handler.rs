@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, ResponseError};
 use oauth2::{CsrfToken, Scope};
 
-use crate::application::AuthUseCases;
+use crate::application::AuthServices;
 use crate::infra::db::{PgTokenRepository, PgUserRepository};
 use crate::shared::{google, ApiResponse};
 
@@ -28,16 +28,14 @@ impl AuthHandler {
 
     /// Handle Google OAuth callback
     pub async fn google_callback(
-        auth_use_cases: web::Data<
-            std::sync::Arc<AuthUseCases<PgUserRepository, PgTokenRepository>>,
-        >,
+        auth_services: web::Data<std::sync::Arc<AuthServices<PgUserRepository, PgTokenRepository>>>,
         query: web::Query<GoogleCallbackQuery>,
     ) -> HttpResponse {
         if query.code.is_empty() {
             return ApiResponse::bad_request("Missing authorization code");
         }
 
-        match auth_use_cases.handle_google_login(&query.code).await {
+        match auth_services.handle_google_login(&query.code).await {
             Ok(login_response) => ApiResponse::success("Logged in", Some(login_response)),
             Err(e) => e.error_response(),
         }

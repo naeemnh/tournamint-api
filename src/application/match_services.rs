@@ -9,8 +9,8 @@ use crate::domain::match_domain::{
 };
 use crate::shared::AppError;
 
-/// Match domain use cases
-pub struct MatchUseCases<M, R>
+/// Match domain services
+pub struct MatchServices<M, R>
 where
     M: MatchRepository,
     R: MatchResultRepository,
@@ -19,7 +19,7 @@ where
     result_repo: Arc<R>,
 }
 
-impl<M, R> MatchUseCases<M, R>
+impl<M, R> MatchServices<M, R>
 where
     M: MatchRepository,
     R: MatchResultRepository,
@@ -97,7 +97,9 @@ where
         winner: i32,
         is_draw: bool,
     ) -> Result<Option<Match>, AppError> {
-        self.match_repo.complete_match(match_id, winner, is_draw).await
+        self.match_repo
+            .complete_match(match_id, winner, is_draw)
+            .await
     }
 
     pub async fn cancel_match(
@@ -211,8 +213,14 @@ where
         self.match_repo.subscribe_to_match(match_id, user_id).await
     }
 
-    pub async fn unsubscribe_from_match(&self, match_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
-        self.match_repo.unsubscribe_from_match(match_id, user_id).await
+    pub async fn unsubscribe_from_match(
+        &self,
+        match_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<(), AppError> {
+        self.match_repo
+            .unsubscribe_from_match(match_id, user_id)
+            .await
     }
 
     // ==================== Bulk ====================
@@ -222,7 +230,9 @@ where
         match_ids: Vec<Uuid>,
         updates: EditableMatch,
     ) -> Result<Vec<Match>, AppError> {
-        self.match_repo.bulk_update_matches(match_ids, updates).await
+        self.match_repo
+            .bulk_update_matches(match_ids, updates)
+            .await
     }
 
     pub async fn bulk_cancel_matches(

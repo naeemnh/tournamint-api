@@ -7,18 +7,17 @@ use serde_json::Value as JsonValue;
 use crate::domain::tournament::{
     BracketType, EditableTournament, EditableTournamentBracket, EditableTournamentCategory,
     EditableTournamentRegistration, EditableTournamentStandings, ExportData, NewTournament,
-    NewTournamentBracket, NewTournamentCategory, NewTournamentRegistration,
-    NewTournamentStandings, RegistrationWithDetails, SportType, Tournament, TournamentBracket,
-    TournamentBracketRepository, TournamentCategory, TournamentCategoryRepository,
-    TournamentDashboard, TournamentFormat, TournamentRegistration,
-    TournamentRegistrationRepository, TournamentRepository, TournamentStandings,
-    TournamentStandingsRepository, TournamentStatus, TournamentSearchQuery, TournamentStats,
-    TournamentTemplate,
+    NewTournamentBracket, NewTournamentCategory, NewTournamentRegistration, NewTournamentStandings,
+    RegistrationWithDetails, SportType, Tournament, TournamentBracket, TournamentBracketRepository,
+    TournamentCategory, TournamentCategoryRepository, TournamentDashboard, TournamentFormat,
+    TournamentRegistration, TournamentRegistrationRepository, TournamentRepository,
+    TournamentSearchQuery, TournamentStandings, TournamentStandingsRepository, TournamentStats,
+    TournamentStatus, TournamentTemplate,
 };
 use crate::shared::AppError;
 
-/// Tournament domain use cases
-pub struct TournamentUseCases<T, C, R, B, S>
+/// Tournament domain services
+pub struct TournamentServices<T, C, R, B, S>
 where
     T: TournamentRepository,
     C: TournamentCategoryRepository,
@@ -33,7 +32,7 @@ where
     standings_repo: Arc<S>,
 }
 
-impl<T, C, R, B, S> TournamentUseCases<T, C, R, B, S>
+impl<T, C, R, B, S> TournamentServices<T, C, R, B, S>
 where
     T: TournamentRepository,
     C: TournamentCategoryRepository,
@@ -78,7 +77,10 @@ where
         self.tournament_repo.get_by_status(status).await
     }
 
-    pub async fn get_my_tournaments(&self, organizer_id: Uuid) -> Result<Vec<Tournament>, AppError> {
+    pub async fn get_my_tournaments(
+        &self,
+        organizer_id: Uuid,
+    ) -> Result<Vec<Tournament>, AppError> {
         self.tournament_repo.get_by_organizer(organizer_id).await
     }
 
@@ -101,10 +103,7 @@ where
         self.tournament_repo.search(query).await
     }
 
-    pub async fn get_featured_tournaments(
-        &self,
-        limit: u32,
-    ) -> Result<Vec<Tournament>, AppError> {
+    pub async fn get_featured_tournaments(&self, limit: u32) -> Result<Vec<Tournament>, AppError> {
         self.tournament_repo.get_featured(limit).await
     }
 
@@ -183,24 +182,34 @@ where
         let mut export_data = serde_json::Map::new();
         export_data.insert(
             "tournament".to_string(),
-            serde_json::to_value(&tournament).map_err(|e| AppError::InternalError(e.to_string()))?,
+            serde_json::to_value(&tournament)
+                .map_err(|e| AppError::InternalError(e.to_string()))?,
         );
         export_data.insert(
             "categories".to_string(),
-            serde_json::to_value(&categories).map_err(|e| AppError::InternalError(e.to_string()))?,
+            serde_json::to_value(&categories)
+                .map_err(|e| AppError::InternalError(e.to_string()))?,
         );
         export_data.insert(
             "registrations".to_string(),
-            serde_json::to_value(&registrations).map_err(|e| AppError::InternalError(e.to_string()))?,
+            serde_json::to_value(&registrations)
+                .map_err(|e| AppError::InternalError(e.to_string()))?,
         );
         export_data.insert(
             "exported_at".to_string(),
-            serde_json::to_value(chrono::Utc::now()).map_err(|e| AppError::InternalError(e.to_string()))?,
+            serde_json::to_value(chrono::Utc::now())
+                .map_err(|e| AppError::InternalError(e.to_string()))?,
         );
 
         let (content_type, filename) = match format.as_str() {
-            "csv" => ("text/csv".to_string(), format!("{}_export.csv", tournament.name)),
-            "pdf" => ("application/pdf".to_string(), format!("{}_export.pdf", tournament.name)),
+            "csv" => (
+                "text/csv".to_string(),
+                format!("{}_export.csv", tournament.name),
+            ),
+            "pdf" => (
+                "application/pdf".to_string(),
+                format!("{}_export.pdf", tournament.name),
+            ),
             _ => (
                 "application/json".to_string(),
                 format!("{}_export.json", tournament.name),
@@ -234,9 +243,7 @@ where
             format: original.format,
             start_date: original.start_date + week,
             end_date: original.end_date + week,
-            registration_start_date: original
-                .registration_start_date
-                .map(|d| d + week),
+            registration_start_date: original.registration_start_date.map(|d| d + week),
             registration_end_date: original.registration_end_date.map(|d| d + week),
             venue: original.venue.clone(),
             max_participants: original.max_participants,
@@ -384,7 +391,9 @@ where
         &self,
         tournament_id: Uuid,
     ) -> Result<Vec<RegistrationWithDetails>, AppError> {
-        self.registration_repo.get_by_tournament(tournament_id).await
+        self.registration_repo
+            .get_by_tournament(tournament_id)
+            .await
     }
 
     pub async fn get_registrations_by_player(
@@ -480,7 +489,9 @@ where
         &self,
         tournament_id: Uuid,
     ) -> Result<Vec<TournamentStandings>, AppError> {
-        self.standings_repo.get_by_tournament_id(tournament_id).await
+        self.standings_repo
+            .get_by_tournament_id(tournament_id)
+            .await
     }
 
     pub async fn get_standings_by_category(
@@ -498,12 +509,11 @@ where
         self.standings_repo.update(id, data).await
     }
 
-    pub async fn recalculate_standings(
-        &self,
-        tournament_id: Uuid,
-    ) -> Result<u64, AppError> {
+    pub async fn recalculate_standings(&self, tournament_id: Uuid) -> Result<u64, AppError> {
         // First delete existing standings, then they would need to be recalculated
         // This is a placeholder - actual implementation would involve complex calculations
-        self.standings_repo.delete_by_tournament(tournament_id).await
+        self.standings_repo
+            .delete_by_tournament(tournament_id)
+            .await
     }
 }

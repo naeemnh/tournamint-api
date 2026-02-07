@@ -1,15 +1,15 @@
-use std::sync::Arc;
 use serde_json::Value;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::domain::user::{
-    EditableUser, NewUser, NewUserProfile, PublicUserProfile, UpdateUserProfile, User,
-    UserProfile, UserProfileRepository, UserRepository,
+    EditableUser, NewUser, NewUserProfile, PublicUserProfile, UpdateUserProfile, User, UserProfile,
+    UserProfileRepository, UserRepository,
 };
 use crate::shared::AppError;
 
-/// User and profile use cases (CRUD and profile operations)
-pub struct UserUseCases<U, P>
+/// User and profile services (CRUD and profile operations)
+pub struct UserServices<U, P>
 where
     U: UserRepository,
     P: UserProfileRepository,
@@ -18,7 +18,7 @@ where
     profile_repo: Arc<P>,
 }
 
-impl<U, P> UserUseCases<U, P>
+impl<U, P> UserServices<U, P>
 where
     U: UserRepository,
     P: UserProfileRepository,
@@ -69,10 +69,15 @@ where
         &self,
         user_id: Uuid,
     ) -> Result<Option<PublicUserProfile>, AppError> {
-        self.profile_repo.find_public_profile_by_user_id(user_id).await
+        self.profile_repo
+            .find_public_profile_by_user_id(user_id)
+            .await
     }
 
-    pub async fn create_profile(&self, new_profile: NewUserProfile) -> Result<UserProfile, AppError> {
+    pub async fn create_profile(
+        &self,
+        new_profile: NewUserProfile,
+    ) -> Result<UserProfile, AppError> {
         self.profile_repo.create(new_profile).await
     }
 
@@ -89,7 +94,9 @@ where
         user_id: Uuid,
         preferences: Value,
     ) -> Result<Option<UserProfile>, AppError> {
-        self.profile_repo.update_preferences(user_id, preferences).await
+        self.profile_repo
+            .update_preferences(user_id, preferences)
+            .await
     }
 
     pub async fn update_notification_preferences(
