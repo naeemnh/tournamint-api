@@ -7,7 +7,7 @@
 mod tests {
     #[actix_web::test]
     async fn test_user_profile_routes_placeholder() {
-        // Placeholder until DDD API profile integration tests are added (with test pool + use cases).
+        // Placeholder until DDD API profile integration tests are added (with test pool + services).
         assert!(true);
     }
 }

@@ -62,6 +62,26 @@ Authorization: Bearer <token>
 - **GET** `/matches/schedule`
 - **Response**: `Vec<Match>`
 
+### Validate Match Result Scores
+- **GET** `/matches/{id}/results/validate`
+- **Response**: Validation result for the match's result scores
+
+### Get Match Media
+- **GET** `/matches/{id}/media`
+- **Response**: `Vec<MatchMedia>` (photos and videos for the match)
+
+### Upload Match Video
+- **POST** `/matches/{id}/video`
+- **Body**: `multipart/form-data` with field `file` (video file, max 50MB)
+- **Response**: `MatchMedia`
+- **Note**: File is uploaded to Cloudinary; URL is stored
+
+### Upload Match Photo
+- **POST** `/matches/{id}/photo`
+- **Body**: `multipart/form-data` with field `file` (image file, max 10MB)
+- **Response**: `MatchMedia`
+- **Note**: File is uploaded to Cloudinary; URL is stored
+
 ---
 
 ## 2. Match Results APIs
@@ -160,8 +180,9 @@ Authorization: Bearer <token>
 
 ### Upload/Update Avatar
 - **POST** `/profile/avatar`
-- **Body**: `UpdateAvatarRequest`
+- **Body**: `multipart/form-data` with field `file` (image file, max 10MB)
 - **Response**: `UserProfile`
+- **Note**: File is uploaded to Cloudinary; URL is stored in profile
 
 ### Remove Avatar
 - **DELETE** `/profile/avatar`

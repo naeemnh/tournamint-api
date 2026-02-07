@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse};
 use oauth2::{CsrfToken, Scope};
 
-use crate::application::AuthUseCases;
+use crate::application::AuthServices;
 use crate::infra::db::{PgTokenRepository, PgUserRepository};
 use crate::shared::google;
 
@@ -28,9 +28,7 @@ impl AuthHandler {
 
     /// Handle Google OAuth callback — redirects to client with token and user as query params
     pub async fn google_callback(
-        auth_use_cases: web::Data<
-            std::sync::Arc<AuthUseCases<PgUserRepository, PgTokenRepository>>,
-        >,
+        auth_services: web::Data<std::sync::Arc<AuthServices<PgUserRepository, PgTokenRepository>>>,
         query: web::Query<GoogleCallbackQuery>,
     ) -> HttpResponse {
         let client_redirect_url = std::env::var("CLIENT_REDIRECT_URL")
@@ -47,10 +45,9 @@ impl AuthHandler {
                 .finish();
         }
 
-        match auth_use_cases.handle_google_login(&query.code).await {
+        match auth_services.handle_google_login(&query.code).await {
             Ok(login_response) => {
-                let user_json = serde_json::to_string(&login_response.user)
-                    .unwrap_or_default();
+                let user_json = serde_json::to_string(&login_response.user).unwrap_or_default();
                 let redirect = format!(
                     "{}?token={}&user={}",
                     client_redirect_url,

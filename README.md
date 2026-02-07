@@ -1,6 +1,6 @@
 # Tournamint Backend (Server)
 
-Rust/Actix-web API for the Tournamint tournament management system. The backend uses a **Domain-Driven Design (DDD)** architecture: domain → application (use cases) → infra (HTTP handlers, PostgreSQL repositories).
+Rust/Actix-web API for the Tournamint tournament management system. The backend uses a **Domain-Driven Design (DDD)** architecture: domain → application (services) → infra (HTTP handlers, PostgreSQL repositories).
 
 ## Quick start
 
@@ -13,7 +13,7 @@ See [docs/backend-setup.md](../docs/backend-setup.md) in the project root for fu
 
 ## Implemented APIs (DDD coverage)
 
-All documented endpoints in [docs/backend-api-reference.md](../docs/backend-api-reference.md) are implemented via use cases and handlers:
+All documented endpoints in [docs/backend-api-reference.md](../docs/backend-api-reference.md) are implemented via services and handlers:
 
 | Area | Scope | Notes |
 |------|--------|--------|
@@ -38,9 +38,9 @@ All documented endpoints in [docs/backend-api-reference.md](../docs/backend-api-
 ## Project layout
 
 - **`src/domain/`** — Entities, value objects, repository traits (no SQLx/Actix).
-- **`src/application/`** — Use cases (auth, user, participant, tournament, match, notification, payment, statistics).
+- **`src/application/`** — Services (auth, user, participant, tournament, match, notification, payment, statistics).
 - **`src/infra/db/`** — PostgreSQL repository implementations (SQLx).
-- **`src/infra/api/`** — Routes and HTTP handlers; handlers call use cases. OpenAPI spec and Swagger UI are in `openapi/` and `openapi.rs`.
+- **`src/infra/api/`** — Routes and HTTP handlers; handlers call services. OpenAPI spec and Swagger UI are in `openapi/` and `openapi.rs`.
 - **`src/shared/`** — Config, errors, API response helpers, JWT, Google OAuth.
 - **`migrations/`** — SQLx migrations.
 

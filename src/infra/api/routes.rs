@@ -18,6 +18,10 @@ use super::handlers::{
 /// Configure all API routes
 pub fn api_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(web::scope("/health").route("", web::get().to(HealthHandler::health)));
+
+    // SSE events (real-time updates)
+    cfg.service(web::scope("/events").route("", web::get().to(super::sse::event_stream)));
+
     // Auth routes (no middleware)
     cfg.service(
         web::scope("/auth/google")

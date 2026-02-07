@@ -22,7 +22,7 @@ futures-util = { version = "0.3", features = ["std"] }
 jsonwebtoken = "8"
 oauth2 = { version = "4.3", features = ["reqwest"] }
 rand = "0.9.1"
-reqwest = { version = "0.12.15", features = ["json"]}
+reqwest = { version = "0.12.15", features = ["json", "multipart"]}
 rust_decimal = { version = "1.36", features = ["serde", "db-postgres"] }
 sea-query = { version = "0.32.0", features = ["with-json", "with-rust_decimal"] }
 sea-query-binder = { version = "0.7", features = ["sqlx-postgres", "with-uuid", "with-chrono", "with-json", "with-rust_decimal"] }
@@ -35,6 +35,13 @@ validator = { version = "0.19", features = ["derive"] }
 tokio = { version = "1.0", features = ["full"] }
 utoipa = { version = "5", features = ["chrono", "uuid"] }
 utoipa-swagger-ui = { version = "9", features = ["actix-web", "vendored"] }
+actix-web-lab = "0.21"
+actix-multipart = "0.7"
+parking_lot = "0.12"
+tokio-stream = "0.1"
+sha1_smol = "1"
+hex = "0.4"
+url = "2"
 
 [dev-dependencies]
 mockall = "0.12"
