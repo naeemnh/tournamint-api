@@ -1,7 +1,7 @@
 -- Create tournament categories table
 CREATE TABLE tournament_categories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    tournament_id UUID NOT NULL REFERENCES tournaments (id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     team_composition team_composition NOT NULL,
@@ -14,12 +14,13 @@ CREATE TABLE tournament_categories (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT valid_participant_limits CHECK (
-        max_participants IS NULL OR 
-        max_participants >= min_participants
+        max_participants IS NULL
+        OR max_participants >= min_participants
     ),
-    UNIQUE(tournament_id, name)
+    UNIQUE (tournament_id, name)
 );
 
 -- Create indexes
-CREATE INDEX idx_tournament_categories_tournament_id ON tournament_categories(tournament_id);
-CREATE INDEX idx_tournament_categories_team_composition ON tournament_categories(team_composition);
+CREATE INDEX idx_tournament_categories_tournament_id ON tournament_categories (tournament_id);
+
+CREATE INDEX idx_tournament_categories_team_composition ON tournament_categories (team_composition);
