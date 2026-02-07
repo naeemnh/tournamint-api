@@ -1,7 +1,7 @@
 -- Add up migration script here
 CREATE TABLE IF NOT EXISTS user_profiles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    user_id UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
     bio TEXT,
     avatar_url VARCHAR(500),
     phone VARCHAR(50),
@@ -20,5 +20,6 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 );
 
 -- Create index for faster lookups
-CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
-CREATE INDEX idx_user_profiles_is_public ON user_profiles(is_public);
+CREATE INDEX idx_user_profiles_user_id ON user_profiles (user_id);
+
+CREATE INDEX idx_user_profiles_is_public ON user_profiles (is_public);

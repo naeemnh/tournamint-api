@@ -10,15 +10,20 @@ CREATE TYPE registration_status AS ENUM (
 -- Create payment status enum
 CREATE TYPE payment_status AS ENUM (
     'pending',
+    'processing',
     'completed',
     'failed',
+    'cancelled',
     'refunded',
-    'waived'
+    'partial_refund',
+    'not_required'
 );
 
 -- Create tournament registrations table
+
+
 CREATE TABLE tournament_registrations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     tournament_category_id UUID NOT NULL REFERENCES tournament_categories(id) ON DELETE CASCADE,
     -- For team sports
     team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
@@ -39,9 +44,9 @@ CREATE TABLE tournament_registrations (
     
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
-    -- Ensure either team_id or player_id is set (but not both)
-    CONSTRAINT valid_participant CHECK (
+
+-- Ensure either team_id or player_id is set (but not both)
+CONSTRAINT valid_participant CHECK (
         (team_id IS NOT NULL AND player_id IS NULL AND partner_player_id IS NULL) OR
         (team_id IS NULL AND player_id IS NOT NULL)
     ),
@@ -56,8 +61,16 @@ CREATE TABLE tournament_registrations (
 );
 
 -- Create indexes
-CREATE INDEX idx_registrations_tournament_category ON tournament_registrations(tournament_category_id);
-CREATE INDEX idx_registrations_team ON tournament_registrations(team_id) WHERE team_id IS NOT NULL;
-CREATE INDEX idx_registrations_player ON tournament_registrations(player_id) WHERE player_id IS NOT NULL;
-CREATE INDEX idx_registrations_status ON tournament_registrations(registration_status);
-CREATE INDEX idx_registrations_payment_status ON tournament_registrations(payment_status);
+CREATE INDEX idx_registrations_tournament_category ON tournament_registrations (tournament_category_id);
+
+CREATE INDEX idx_registrations_team ON tournament_registrations (team_id)
+WHERE
+    team_id IS NOT NULL;
+
+CREATE INDEX idx_registrations_player ON tournament_registrations (player_id)
+WHERE
+    player_id IS NOT NULL;
+
+CREATE INDEX idx_registrations_status ON tournament_registrations (registration_status);
+
+CREATE INDEX idx_registrations_payment_status ON tournament_registrations (payment_status);

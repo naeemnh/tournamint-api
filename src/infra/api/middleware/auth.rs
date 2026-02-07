@@ -10,7 +10,7 @@ use std::pin::Pin;
 use std::rc::Rc;
 use uuid::Uuid;
 
-use crate::shared::jwt::Claims;
+use crate::shared::{jwt::Claims, EnvConfig};
 
 pub struct AuthMiddleware;
 
@@ -63,6 +63,7 @@ where
                 || req.path().starts_with("/swagger-ui")
                 || req.path().starts_with("/api-docs")
                 || req.path().starts_with("/events")
+                || req.path().starts_with("/health")
             {
                 return svc.call(req).await;
             }
@@ -76,8 +77,7 @@ where
                 .ok_or_else(|| ErrorUnauthorized("Missing token"))?;
 
             // Validate JWT
-            let secret = std::env::var("JWT_SECRET")
-                .map_err(|_| ErrorUnauthorized("Server configuration error"))?;
+            let secret = EnvConfig::from_env().jwt_secret.clone();
 
             let token_data = decode::<Claims>(
                 token,
@@ -101,15 +101,11 @@ pub fn auth_middleware() -> AuthMiddleware {
 
 /// Helper function to extract user ID from token in request
 pub fn get_user_id_from_request(req: &HttpRequest) -> Result<Uuid, HttpResponse> {
-    let claims = req
-        .extensions()
-        .get::<Claims>()
-        .cloned()
-        .ok_or_else(|| {
-            HttpResponse::Unauthorized().json(serde_json::json!({
-                "error": "No authentication token found"
-            }))
-        })?;
+    let claims = req.extensions().get::<Claims>().cloned().ok_or_else(|| {
+        HttpResponse::Unauthorized().json(serde_json::json!({
+            "error": "No authentication token found"
+        }))
+    })?;
 
     Uuid::parse_str(&claims.sub).map_err(|_| {
         HttpResponse::Unauthorized().json(serde_json::json!({
