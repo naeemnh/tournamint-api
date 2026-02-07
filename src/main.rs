@@ -5,6 +5,8 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::infra::api::openapi::ApiDoc;
+use crate::infra::api::sse::Broadcaster;
+use crate::infra::cloudinary::{CloudinaryClient, CloudinaryConfig};
 
 // ==================== DDD ARCHITECTURE ====================
 mod application;
@@ -81,6 +83,11 @@ async fn main() -> std::io::Result<()> {
         Arc::clone(&player_repo),
     ));
 
+    let broadcaster = Broadcaster::create();
+
+    let cloudinary_config = CloudinaryConfig::from_env().expect("CLOUDINARY_URL must be set and valid");
+    let cloudinary_client = std::sync::Arc::new(CloudinaryClient::new(cloudinary_config));
+
     println!("Starting server at http://{}", &bind_address);
 
     HttpServer::new(move || {
@@ -90,6 +97,8 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-docs/openapi.json", ApiDoc::openapi()),
             )
+            .app_data(web::Data::new(Arc::clone(&broadcaster)))
+            .app_data(web::Data::new(Arc::clone(&cloudinary_client)))
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(Arc::clone(&auth_use_cases)))
             .app_data(web::Data::new(Arc::clone(&user_use_cases)))

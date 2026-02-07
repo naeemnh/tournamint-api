@@ -1,12 +1,15 @@
+use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use uuid::Uuid;
 
 use crate::application::UserUseCases;
 use crate::domain::user::{
-    EditableUser, NewUser, UpdateAvatarRequest, UpdateNotificationPreferences,
-    UpdatePrivacySettings, UpdateUserPreferences, UpdateUserProfile,
+    EditableUser, NewUser, UpdateNotificationPreferences, UpdatePrivacySettings,
+    UpdateUserPreferences, UpdateUserProfile,
 };
 use crate::infra::api::middleware::auth::get_user_id_from_request;
+use crate::infra::api::multipart_util::extract_file_from_multipart;
+use crate::infra::cloudinary::CloudinaryClient;
 use crate::infra::db::{PgUserProfileRepository, PgUserRepository};
 use crate::shared::ApiResponse;
 
@@ -176,14 +179,27 @@ impl UserProfileHandler {
 
     pub async fn update_avatar(
         use_cases: web::Data<UserUseCasesData>,
+        cloudinary: web::Data<std::sync::Arc<CloudinaryClient>>,
         req: HttpRequest,
-        body: web::Json<UpdateAvatarRequest>,
+        mut payload: Multipart,
     ) -> HttpResponse {
         let user_id = match get_user_id_from_request(&req) {
             Ok(id) => id,
             Err(response) => return response,
         };
-        match use_cases.update_avatar(user_id, body.avatar_url.clone()).await {
+        let bytes = match extract_file_from_multipart(&mut payload, 10 * 1024 * 1024).await {
+            Ok(b) => b,
+            Err(r) => return r,
+        };
+        let public_id = format!("tournamint/avatars/{}", user_id);
+        let result = match cloudinary.upload(&bytes, "image", &public_id).await {
+            Ok(r) => r,
+            Err(e) => return e.error_response(),
+        };
+        match use_cases
+            .update_avatar(user_id, result.secure_url)
+            .await
+        {
             Ok(Some(profile)) => ApiResponse::success("Updated", Some(profile)),
             Ok(None) => ApiResponse::not_found("Profile not found"),
             Err(e) => e.error_response(),

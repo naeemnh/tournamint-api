@@ -1,3 +1,4 @@
+use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -9,6 +10,9 @@ use crate::domain::match_domain::{
     RescheduleMatchRequest, UpdateMatchStatusRequest,
 };
 use crate::infra::api::middleware::auth::get_user_id_from_request;
+use crate::infra::api::sse::{Broadcaster, RealtimeEvent};
+use crate::infra::api::multipart_util::extract_file_from_multipart;
+use crate::infra::cloudinary::CloudinaryClient;
 use crate::infra::db::{PgMatchRepository, PgMatchResultRepository};
 use crate::shared::ApiResponse;
 
@@ -151,12 +155,24 @@ impl MatchHandler {
 
     pub async fn update_status(
         use_cases: web::Data<MatchUseCasesData>,
+        broadcaster: web::Data<std::sync::Arc<Broadcaster>>,
         path: web::Path<Uuid>,
         body: web::Json<UpdateMatchStatusRequest>,
     ) -> HttpResponse {
         let id = path.into_inner();
         match use_cases.update_match_status(id, body.status).await {
-            Ok(Some(m)) => ApiResponse::success("Updated", Some(m)),
+            Ok(Some(m)) => {
+                let status = format!("{:?}", m.match_status);
+                broadcaster
+                    .broadcast_event(&RealtimeEvent::MatchUpdate {
+                        match_id: m.id,
+                        tournament_id: None,
+                        category_id: Some(m.tournament_category_id),
+                        status: Some(status),
+                    })
+                    .await;
+                ApiResponse::success("Updated", Some(m))
+            }
             Ok(None) => ApiResponse::not_found("Match not found"),
             Err(e) => e.error_response(),
         }
@@ -164,11 +180,22 @@ impl MatchHandler {
 
     pub async fn start(
         use_cases: web::Data<MatchUseCasesData>,
+        broadcaster: web::Data<std::sync::Arc<Broadcaster>>,
         path: web::Path<Uuid>,
     ) -> HttpResponse {
         let id = path.into_inner();
         match use_cases.start_match(id).await {
-            Ok(Some(m)) => ApiResponse::success("Started", Some(m)),
+            Ok(Some(m)) => {
+                broadcaster
+                    .broadcast_event(&RealtimeEvent::MatchUpdate {
+                        match_id: m.id,
+                        tournament_id: None,
+                        category_id: Some(m.tournament_category_id),
+                        status: Some("InProgress".to_string()),
+                    })
+                    .await;
+                ApiResponse::success("Started", Some(m))
+            }
             Ok(None) => ApiResponse::not_found("Match not found"),
             Err(e) => e.error_response(),
         }
@@ -176,12 +203,23 @@ impl MatchHandler {
 
     pub async fn complete(
         use_cases: web::Data<MatchUseCasesData>,
+        broadcaster: web::Data<std::sync::Arc<Broadcaster>>,
         path: web::Path<Uuid>,
         body: web::Json<CompleteMatchRequest>,
     ) -> HttpResponse {
         let id = path.into_inner();
         match use_cases.complete_match(id, body.winner_participant, body.is_draw).await {
-            Ok(Some(m)) => ApiResponse::success("Completed", Some(m)),
+            Ok(Some(m)) => {
+                broadcaster
+                    .broadcast_event(&RealtimeEvent::MatchUpdate {
+                        match_id: m.id,
+                        tournament_id: None,
+                        category_id: Some(m.tournament_category_id),
+                        status: Some("Completed".to_string()),
+                    })
+                    .await;
+                ApiResponse::success("Completed", Some(m))
+            }
             Ok(None) => ApiResponse::not_found("Match not found"),
             Err(e) => e.error_response(),
         }
@@ -257,12 +295,23 @@ impl MatchHandler {
 
     pub async fn update_live(
         use_cases: web::Data<MatchUseCasesData>,
+        broadcaster: web::Data<std::sync::Arc<Broadcaster>>,
         path: web::Path<Uuid>,
         body: web::Json<LiveMatchUpdate>,
     ) -> HttpResponse {
         let id = path.into_inner();
         match use_cases.update_live_match(id, body.into_inner()).await {
-            Ok(Some(m)) => ApiResponse::success("Updated", Some(m)),
+            Ok(Some(m)) => {
+                broadcaster
+                    .broadcast_event(&RealtimeEvent::MatchUpdate {
+                        match_id: m.id,
+                        tournament_id: None,
+                        category_id: Some(m.tournament_category_id),
+                        status: Some("live_update".to_string()),
+                    })
+                    .await;
+                ApiResponse::success("Updated", Some(m))
+            }
             Ok(None) => ApiResponse::not_found("Match not found"),
             Err(e) => e.error_response(),
         }
@@ -305,16 +354,29 @@ impl MatchHandler {
 
     pub async fn upload_video(
         use_cases: web::Data<MatchUseCasesData>,
+        cloudinary: web::Data<std::sync::Arc<CloudinaryClient>>,
         req: HttpRequest,
         path: web::Path<Uuid>,
-        body: web::Json<UploadMediaBody>,
+        mut payload: Multipart,
     ) -> HttpResponse {
         let user_id = match get_user_id_from_request(&req) {
             Ok(id) => id,
             Err(response) => return response,
         };
         let id = path.into_inner();
-        match use_cases.upload_match_media(id, user_id, "video", &body.file_url).await {
+        let bytes = match extract_file_from_multipart(&mut payload, 50 * 1024 * 1024).await {
+            Ok(b) => b,
+            Err(r) => return r,
+        };
+        let public_id = format!("tournamint/matches/{}/{}", id, Uuid::new_v4());
+        let result = match cloudinary.upload(&bytes, "video", &public_id).await {
+            Ok(r) => r,
+            Err(e) => return e.error_response(),
+        };
+        match use_cases
+            .upload_match_media(id, user_id, "video", &result.secure_url)
+            .await
+        {
             Ok(media) => ApiResponse::created("Created", media),
             Err(e) => e.error_response(),
         }
@@ -322,16 +384,29 @@ impl MatchHandler {
 
     pub async fn upload_photo(
         use_cases: web::Data<MatchUseCasesData>,
+        cloudinary: web::Data<std::sync::Arc<CloudinaryClient>>,
         req: HttpRequest,
         path: web::Path<Uuid>,
-        body: web::Json<UploadMediaBody>,
+        mut payload: Multipart,
     ) -> HttpResponse {
         let user_id = match get_user_id_from_request(&req) {
             Ok(id) => id,
             Err(response) => return response,
         };
         let id = path.into_inner();
-        match use_cases.upload_match_media(id, user_id, "photo", &body.file_url).await {
+        let bytes = match extract_file_from_multipart(&mut payload, 10 * 1024 * 1024).await {
+            Ok(b) => b,
+            Err(r) => return r,
+        };
+        let public_id = format!("tournamint/matches/{}/{}", id, Uuid::new_v4());
+        let result = match cloudinary.upload(&bytes, "image", &public_id).await {
+            Ok(r) => r,
+            Err(e) => return e.error_response(),
+        };
+        match use_cases
+            .upload_match_media(id, user_id, "photo", &result.secure_url)
+            .await
+        {
             Ok(media) => ApiResponse::created("Created", media),
             Err(e) => e.error_response(),
         }
@@ -422,11 +497,6 @@ impl MatchHandler {
             Err(e) => e.error_response(),
         }
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UploadMediaBody {
-    pub file_url: String,
 }
 
 pub struct MatchResultHandler;
