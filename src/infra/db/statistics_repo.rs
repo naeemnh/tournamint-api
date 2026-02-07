@@ -429,7 +429,8 @@ impl StatisticsRepository for PgStatisticsRepository {
         let limit = limit.min(100).max(1);
         let sql = match entity_type {
             "player" => match category {
-                "points" => r#"
+                "points" => {
+                    r#"
                     WITH player_stats AS (
                         SELECT p.id, p.name,
                             COALESCE(
@@ -458,8 +459,10 @@ impl StatisticsRepository for PgStatisticsRepository {
                     SELECT ROW_NUMBER() OVER (ORDER BY ranking_points DESC, matches_won DESC) AS rank, id, name,
                            ranking_points AS points, matches_won AS tournaments_won, win_rate, total_earnings, last_active
                     FROM player_stats WHERE ranking_points > 0 ORDER BY ranking_points DESC, matches_won DESC LIMIT $1 OFFSET $2
-                "#,
-                "wins" => r#"
+                "#
+                }
+                "wins" => {
+                    r#"
                     WITH player_stats AS (
                         SELECT p.id, p.name,
                             (SELECT COUNT(*) FROM matches m WHERE (m.participant1_player_id = p.id OR m.participant2_player_id = p.id) AND m.match_status = 'completed'
@@ -475,8 +478,10 @@ impl StatisticsRepository for PgStatisticsRepository {
                     SELECT ROW_NUMBER() OVER (ORDER BY matches_won DESC, win_rate DESC) AS rank, id, name,
                            matches_won::DECIMAL AS points, matches_won AS tournaments_won, win_rate, total_earnings, last_active
                     FROM player_stats WHERE matches_won > 0 ORDER BY matches_won DESC, win_rate DESC LIMIT $1 OFFSET $2
-                "#,
-                "earnings" => r#"
+                "#
+                }
+                "earnings" => {
+                    r#"
                     WITH player_stats AS (
                         SELECT p.id, p.name,
                             COALESCE((SELECT SUM(tr.payment_amount) FROM tournament_registrations tr WHERE tr.player_id = p.id AND tr.registration_status = 'approved'), 0) AS total_earnings,
@@ -492,8 +497,10 @@ impl StatisticsRepository for PgStatisticsRepository {
                     SELECT ROW_NUMBER() OVER (ORDER BY total_earnings DESC, matches_won DESC) AS rank, id, name,
                            total_earnings AS points, matches_won AS tournaments_won, win_rate, total_earnings, last_active
                     FROM player_stats WHERE total_earnings > 0 ORDER BY total_earnings DESC, matches_won DESC LIMIT $1 OFFSET $2
-                "#,
-                _ => r#"
+                "#
+                }
+                _ => {
+                    r#"
                     WITH player_stats AS (
                         SELECT p.id, p.name,
                             CASE WHEN (SELECT COUNT(*) FROM matches m WHERE (m.participant1_player_id = p.id OR m.participant2_player_id = p.id) AND m.match_status = 'completed') = 0 THEN 0
@@ -509,10 +516,12 @@ impl StatisticsRepository for PgStatisticsRepository {
                     SELECT ROW_NUMBER() OVER (ORDER BY win_rate DESC, matches_won DESC) AS rank, id, name,
                            win_rate AS points, matches_won AS tournaments_won, win_rate, total_earnings, last_active
                     FROM player_stats WHERE matches_won > 0 ORDER BY win_rate DESC, matches_won DESC LIMIT $1 OFFSET $2
-                "#,
+                "#
+                }
             },
             _ => match category {
-                "points" => r#"
+                "points" => {
+                    r#"
                     WITH team_stats AS (
                         SELECT t.id, t.name,
                             COALESCE(
@@ -534,12 +543,15 @@ impl StatisticsRepository for PgStatisticsRepository {
                     SELECT ROW_NUMBER() OVER (ORDER BY ranking_points DESC, tournaments_won DESC) AS rank, id, name,
                            ranking_points AS points, tournaments_won, win_rate, total_earnings, last_active
                     FROM team_stats WHERE ranking_points > 0 ORDER BY ranking_points DESC, tournaments_won DESC LIMIT $1 OFFSET $2
-                "#,
-                _ => r#"
+                "#
+                }
+                _ => {
+                    r#"
                     SELECT 1::BIGINT AS rank, gen_random_uuid() AS id, 'Sample Team' AS name, 0::DECIMAL AS points,
                            0::BIGINT AS tournaments_won, 0::DECIMAL AS win_rate, 0::DECIMAL AS total_earnings, NOW() AS last_active
                     WHERE FALSE LIMIT $1 OFFSET $2
-                "#,
+                "#
+                }
             },
         };
 
@@ -563,7 +575,7 @@ impl StatisticsRepository for PgStatisticsRepository {
                 GROUP BY p.id, p.name
                 HAVING COUNT(*) > 0
             )
-            SELECT uuid_generate_v4() AS id, category, 'player' AS record_type, id AS holder_id, name AS holder_name,
+            SELECT gen_random_uuid() AS id, category, 'player' AS record_type, id AS holder_id, name AS holder_name,
                    value, description, achieved_date, NULL::UUID AS tournament_id, NULL::VARCHAR AS tournament_name
             FROM ranked ORDER BY value DESC LIMIT $1
         "#;
@@ -663,7 +675,10 @@ impl StatisticsRepository for PgStatisticsRepository {
             most_popular_sport: basic_row.most_popular_sport,
             top_players,
             top_teams,
-            recent_tournaments: recent_tournaments.into_iter().map(TournamentStatistics::from).collect(),
+            recent_tournaments: recent_tournaments
+                .into_iter()
+                .map(TournamentStatistics::from)
+                .collect(),
             growth_metrics,
         })
     }
