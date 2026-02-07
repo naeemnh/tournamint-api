@@ -9,5 +9,5 @@ pub mod types;
 
 // Re-export commonly used items
 pub use api_response::ApiResponse;
-pub use config::AppConfig;
+pub use config::{AppConfig, EnvConfig};
 pub use errors::AppError;

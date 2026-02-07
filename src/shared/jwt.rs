@@ -2,6 +2,8 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::shared::EnvConfig;
+
 /// JWT Claims structure
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
@@ -20,7 +22,7 @@ impl Claims {
 pub fn generate_jwt(user_id: Uuid, email: &str) -> Result<String, jsonwebtoken::errors::Error> {
     use chrono::Utc;
 
-    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let secret = EnvConfig::from_env().jwt_secret.clone();
     let expiration = Utc::now()
         .checked_add_signed(chrono::Duration::hours(24))
         .expect("Invalid timestamp")
@@ -41,7 +43,7 @@ pub fn generate_jwt(user_id: Uuid, email: &str) -> Result<String, jsonwebtoken::
 
 /// Validate and decode a JWT token
 pub fn validate_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let secret = EnvConfig::from_env().jwt_secret.clone();
 
     let token_data = decode::<Claims>(
         token,

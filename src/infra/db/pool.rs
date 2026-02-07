@@ -1,6 +1,6 @@
+use crate::shared::EnvConfig;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
-use std::env;
 use std::time::Duration;
 
 pub type DbPool = Pool<Postgres>;
@@ -9,8 +9,7 @@ pub struct DbConfig;
 
 impl DbConfig {
     pub async fn create_db_pool() -> Result<DbPool, sqlx::Error> {
-        let database_url = env::var("DATABASE_URL")
-            .expect("DATABASE_URL must be set in .env file or environment variables");
+        let database_url = EnvConfig::from_env().database_url;
 
         PgPoolOptions::new()
             .min_connections(1)
